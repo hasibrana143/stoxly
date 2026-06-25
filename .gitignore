@@ -1,0 +1,16 @@
+node_modules/
+**/node_modules/
+
+stock-trading-platform/frontend/build/
+stock-trading-platform/backend/venv_new/
+stock-trading-platform/backend/__pycache__/
+stock-trading-platform/backend/stock_platform.db
+stock-trading-platform/backend/.env
+
+.cursor/
+*.docx
+*.log
+.cache/
+__pycache__/
+*.pyc
+.DS_Store

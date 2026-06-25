@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+sqlalchemy
+python-jose[cryptography]
+bcrypt>=4.0.1,<6
+python-multipart
+pydantic[email]
+httpx
+pandas
+numpy
+scipy
+scikit-learn
+yfinance
+python-decouple
+openai
+google-generativeai
