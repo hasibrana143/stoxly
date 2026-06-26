@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends, status, WebSocket, WebSocke
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-from typing import List, Optional, Any
+from typing import List, Optional, Dict, Any
 import asyncio
 import json
 import random
@@ -20,6 +20,11 @@ from models import (
 from schemas import (
     UserCreate, UserLogin,
     PersonalizedChatMessage, PersonalizedChatResponse, UserRecommendationBase,
+    PortfolioCreate, OptimizationRequest,
+    InvestmentProfileCreate, InvestmentProfileUpdate, InvestmentProfile,
+    IndianStockPrice, HoldingCreate, HoldingUpdate,
+    PortfolioDetail, PortfolioHolding, MarketMover,
+    ScreenerFilters, ScreenerResults,
 )
 from auth import create_access_token, verify_token, get_password_hash, verify_password
 from comprehensive_indian_stocks import (
