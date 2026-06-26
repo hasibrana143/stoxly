@@ -7,7 +7,7 @@ from comprehensive_indian_stocks import mock_provider, format_inr_price
 from screener_service import screener_service
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/stocks", tags=["Stocks"])
+router = APIRouter(prefix="/api/v1/stocks", tags=["Stocks"])
 
 
 @router.get("/search/{query}")

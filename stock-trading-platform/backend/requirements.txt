@@ -14,3 +14,4 @@ yfinance
 python-decouple
 openai
 google-genai
+sentry-sdk

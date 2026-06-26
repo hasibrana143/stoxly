@@ -4,6 +4,7 @@ import logging
 from contextlib import asynccontextmanager
 from typing import List
 
+import sentry_sdk
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -13,6 +14,7 @@ from core.database import get_db
 from core.security import get_password_hash
 from models import User, create_tables
 from middleware.error_handler import global_exception_handler
+from middleware.rate_limiter import RateLimitMiddleware
 from comprehensive_indian_stocks import mock_provider
 
 logging.basicConfig(level=logging.INFO)
@@ -81,11 +83,19 @@ async def lifespan(app: FastAPI):
     logger.info("Application shutting down")
 
 
+if settings.SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        traces_sample_rate=0.1,
+        environment="production" if not settings.DEBUG else "development",
+    )
+
 app = FastAPI(title=settings.APP_NAME, description="Comprehensive stock trading platform with AI chat and portfolio optimization", version=settings.VERSION, lifespan=lifespan)
 
 app.add_exception_handler(Exception, global_exception_handler)
 
 app.add_middleware(CORSMiddleware, allow_origins=settings.CORS_ORIGINS, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(RateLimitMiddleware, max_requests=100, window_seconds=60)
 
 from api.v1 import auth, stocks, portfolio, watchlist, screener, indian_stocks, chat, profile, recommendations
 

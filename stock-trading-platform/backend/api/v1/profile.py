@@ -4,27 +4,31 @@ from sqlalchemy.orm import Session
 import logging
 
 from database import get_db
-from models import User, InvestmentProfile as DBInvestmentProfile
 from schemas import InvestmentProfileCreate, InvestmentProfileUpdate, InvestmentProfile
 from core.security import verify_token
+from repositories.user_repository import UserRepository
+from repositories.profile_repository import InvestmentProfileRepository
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/profile", tags=["Profile"])
-security = HTTPBearer()
+router = APIRouter(prefix="/api/v1/profile", tags=["Profile"])
 
 
 @router.post("/investment", response_model=InvestmentProfile)
-async def create_investment_profile(profile: InvestmentProfileCreate, credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+async def create_investment_profile(profile: InvestmentProfileCreate, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()), db: Session = Depends(get_db)):
     try:
         user_email = verify_token(credentials.credentials)
-        user = db.query(User).filter(User.email == user_email).first()
-        existing_profile = db.query(DBInvestmentProfile).filter(DBInvestmentProfile.user_id == user.id).first()
+        user = UserRepository(db).get_by_email(user_email)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        existing_profile = InvestmentProfileRepository(db).get_by_user_id(user.id)
         if existing_profile:
             raise HTTPException(status_code=400, detail="Investment profile already exists")
-        db_profile = DBInvestmentProfile(user_id=user.id, investment_amount=profile.investment_amount, risk_level=profile.risk_level, timeline=profile.timeline, investment_goals=profile.investment_goals, monthly_income=profile.monthly_income, age=profile.age)
-        db.add(db_profile)
-        db.commit()
-        db.refresh(db_profile)
+        db_profile = InvestmentProfileRepository(db).create(
+            user_id=user.id, investment_amount=profile.investment_amount,
+            risk_level=profile.risk_level, timeline=profile.timeline,
+            investment_goals=profile.investment_goals,
+            monthly_income=profile.monthly_income, age=profile.age
+        )
         return db_profile
     except HTTPException:
         raise
@@ -34,11 +38,13 @@ async def create_investment_profile(profile: InvestmentProfileCreate, credential
 
 
 @router.get("/investment", response_model=InvestmentProfile)
-async def get_investment_profile(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+async def get_investment_profile(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()), db: Session = Depends(get_db)):
     try:
         user_email = verify_token(credentials.credentials)
-        user = db.query(User).filter(User.email == user_email).first()
-        profile = db.query(DBInvestmentProfile).filter(DBInvestmentProfile.user_id == user.id).first()
+        user = UserRepository(db).get_by_email(user_email)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        profile = InvestmentProfileRepository(db).get_by_user_id(user.id)
         if not profile:
             raise HTTPException(status_code=404, detail="Investment profile not found")
         return profile
@@ -50,17 +56,16 @@ async def get_investment_profile(credentials: HTTPAuthorizationCredentials = Dep
 
 
 @router.put("/investment", response_model=InvestmentProfile)
-async def update_investment_profile(profile_update: InvestmentProfileUpdate, credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+async def update_investment_profile(profile_update: InvestmentProfileUpdate, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()), db: Session = Depends(get_db)):
     try:
         user_email = verify_token(credentials.credentials)
-        user = db.query(User).filter(User.email == user_email).first()
-        profile = db.query(DBInvestmentProfile).filter(DBInvestmentProfile.user_id == user.id).first()
+        user = UserRepository(db).get_by_email(user_email)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        profile = InvestmentProfileRepository(db).get_by_user_id(user.id)
         if not profile:
             raise HTTPException(status_code=404, detail="Investment profile not found")
-        for field, value in profile_update.dict(exclude_unset=True).items():
-            setattr(profile, field, value)
-        db.commit()
-        db.refresh(profile)
+        profile = InvestmentProfileRepository(db).update(profile, **profile_update.dict(exclude_unset=True))
         return profile
     except HTTPException:
         raise

@@ -16,5 +16,6 @@ class Settings:
 
     GEMINI_API_KEY: str | None = config('GEMINI_API_KEY', default=None)
     ALPHA_VANTAGE_API_KEY: str | None = config('ALPHA_VANTAGE_API_KEY', default=None)
+    SENTRY_DSN: str | None = config('SENTRY_DSN', default=None)
 
 settings = Settings()

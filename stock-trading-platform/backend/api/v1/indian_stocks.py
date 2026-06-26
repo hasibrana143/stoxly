@@ -5,7 +5,7 @@ from schemas import IndianStockPrice
 from comprehensive_indian_stocks import mock_provider, format_inr_price
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/indian-stocks", tags=["Indian Stocks"])
+router = APIRouter(prefix="/api/v1/indian-stocks", tags=["Indian Stocks"])
 
 
 @router.get("/all")

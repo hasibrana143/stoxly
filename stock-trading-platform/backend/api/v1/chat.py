@@ -5,14 +5,14 @@ from datetime import datetime
 import logging
 
 from database import get_db
-from models import User, ChatHistory
 from schemas import PersonalizedChatMessage, PersonalizedChatResponse
 from services.ai_service import generate_personalized_response, generate_stock_recommendations
 from core.security import verify_token
+from repositories.user_repository import UserRepository
+from repositories.chat_repository import ChatHistoryRepository
 
 logger = logging.getLogger(__name__)
-security = HTTPBearer()
-router = APIRouter(prefix="/api", tags=["Chat"])
+router = APIRouter(prefix="/api/v1", tags=["Chat"])
 
 
 @router.post("/chat", response_model=PersonalizedChatResponse)
@@ -104,20 +104,19 @@ async def chat_with_ai(message: PersonalizedChatMessage, db: Session = Depends(g
 
 
 @router.post("/chat/personalized", response_model=PersonalizedChatResponse)
-async def personalized_chat(message: PersonalizedChatMessage, credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+async def personalized_chat(message: PersonalizedChatMessage, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()), db: Session = Depends(get_db)):
     try:
         user_email = verify_token(credentials.credentials)
-        user = db.query(User).filter(User.email == user_email).first()
+        user = UserRepository(db).get_by_email(user_email)
         user_profile = None
-        if message.include_profile:
-            from models import InvestmentProfile as DBInvestmentProfile
-            user_profile = db.query(DBInvestmentProfile).filter(DBInvestmentProfile.user_id == user.id).first()
+        if message.include_profile and user:
+            from repositories.profile_repository import InvestmentProfileRepository
+            user_profile = InvestmentProfileRepository(db).get_by_user_id(user.id)
         response = generate_personalized_response(message.message, user_profile)
         recommendations = generate_stock_recommendations(user_profile) if user_profile else None
         result = PersonalizedChatResponse(message=message.message, response=response, recommendations=recommendations, timestamp=datetime.now().isoformat(), user_profile_considered=user_profile is not None)
         if user:
-            db.add(ChatHistory(user_id=user.id, message=message.message, response=response))
-            db.commit()
+            ChatHistoryRepository(db).create(user_id=user.id, message=message.message, response=response)
         return result
     except Exception as e:
         logger.error(f"Personalized chat error: {str(e)}")

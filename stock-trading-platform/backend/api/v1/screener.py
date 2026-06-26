@@ -6,14 +6,14 @@ import json
 import logging
 
 from database import get_db
-from models import User, UserScreenerFilter
 from schemas import ScreenerFilters
 from core.security import verify_token
 from screener_service import screener_service
+from repositories.user_repository import UserRepository
+from repositories.screener_repository import UserScreenerFilterRepository
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/screener", tags=["Screener"])
-security = HTTPBearer()
+router = APIRouter(prefix="/api/v1/screener", tags=["Screener"])
 
 
 @router.post("/screen")
@@ -131,13 +131,13 @@ async def get_filter_presets():
 
 
 @router.get("/filters/list")
-async def list_user_filters(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+async def list_user_filters(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()), db: Session = Depends(get_db)):
     try:
         user_email = verify_token(credentials.credentials)
-        user = db.query(User).filter(User.email == user_email).first()
+        user = UserRepository(db).get_by_email(user_email)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        filters = db.query(UserScreenerFilter).filter(UserScreenerFilter.user_id == user.id).order_by(UserScreenerFilter.id.desc()).all()
+        filters = UserScreenerFilterRepository(db).get_by_user_id(user.id)
         return {"filters": [{"id": f.id, "filter_name": f.filter_name, "filter_criteria": f.filter_criteria, "is_default": f.is_default} for f in filters]}
     except HTTPException:
         raise
@@ -147,20 +147,18 @@ async def list_user_filters(credentials: HTTPAuthorizationCredentials = Depends(
 
 
 @router.post("/filters/save")
-async def save_user_filter(payload: Dict[str, Any], credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+async def save_user_filter(payload: Dict[str, Any], credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()), db: Session = Depends(get_db)):
     try:
         user_email = verify_token(credentials.credentials)
-        user = db.query(User).filter(User.email == user_email).first()
+        user = UserRepository(db).get_by_email(user_email)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         name = payload.get("filter_name")
         criteria = payload.get("filter_criteria")
         if not name or criteria is None:
             raise HTTPException(status_code=400, detail="Missing filter_name or filter_criteria")
-        user_filter = UserScreenerFilter(user_id=user.id, filter_name=name, filter_criteria=json.dumps(criteria))
-        db.add(user_filter)
-        db.commit()
-        filters = db.query(UserScreenerFilter).filter(UserScreenerFilter.user_id == user.id).order_by(UserScreenerFilter.id.desc()).all()
+        UserScreenerFilterRepository(db).create(user_id=user.id, filter_name=name, filter_criteria=json.dumps(criteria))
+        filters = UserScreenerFilterRepository(db).get_by_user_id(user.id)
         return {"filters": [{"id": f.id, "filter_name": f.filter_name, "filter_criteria": f.filter_criteria, "is_default": f.is_default} for f in filters]}
     except HTTPException:
         raise
@@ -170,17 +168,16 @@ async def save_user_filter(payload: Dict[str, Any], credentials: HTTPAuthorizati
 
 
 @router.delete("/filters/{filter_id}")
-async def delete_user_filter(filter_id: int, credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+async def delete_user_filter(filter_id: int, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()), db: Session = Depends(get_db)):
     try:
         user_email = verify_token(credentials.credentials)
-        user = db.query(User).filter(User.email == user_email).first()
+        user = UserRepository(db).get_by_email(user_email)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        filt = db.query(UserScreenerFilter).filter(UserScreenerFilter.id == filter_id, UserScreenerFilter.user_id == user.id).first()
+        filt = UserScreenerFilterRepository(db).get_by_id_and_user(filter_id, user.id)
         if not filt:
             raise HTTPException(status_code=404, detail="Filter not found")
-        db.delete(filt)
-        db.commit()
+        UserScreenerFilterRepository(db).delete(filt)
         return {"success": True}
     except HTTPException:
         raise

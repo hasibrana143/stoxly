@@ -7,32 +7,29 @@ import numpy as np
 from scipy.optimize import minimize
 
 from database import get_db
-from models import User, Portfolio, Holding
 from schemas import PortfolioCreate, HoldingCreate, HoldingUpdate, PortfolioDetail, PortfolioHolding, OptimizationRequest
 from core.security import verify_token
 from comprehensive_indian_stocks import mock_provider
+from repositories.user_repository import UserRepository
+from repositories.portfolio_repository import PortfolioRepository, HoldingRepository
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/portfolio", tags=["Portfolio"])
-security = HTTPBearer()
+router = APIRouter(prefix="/api/v1/portfolio", tags=["Portfolio"])
 
 
 def _get_user(credentials: HTTPAuthorizationCredentials, db: Session):
     user_email = verify_token(credentials.credentials)
-    user = db.query(User).filter(User.email == user_email).first()
+    user = UserRepository(db).get_by_email(user_email)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
 
 @router.post("/create")
-async def create_portfolio(portfolio: PortfolioCreate, credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+async def create_portfolio(portfolio: PortfolioCreate, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()), db: Session = Depends(get_db)):
     try:
         user = _get_user(credentials, db)
-        db_portfolio = Portfolio(name=portfolio.name, description=portfolio.description, user_id=user.id)
-        db.add(db_portfolio)
-        db.commit()
-        db.refresh(db_portfolio)
+        db_portfolio = PortfolioRepository(db).create(name=portfolio.name, description=portfolio.description, user_id=user.id)
         return {"id": db_portfolio.id, "name": db_portfolio.name, "description": db_portfolio.description, "created_at": db_portfolio.created_at}
     except HTTPException:
         raise
@@ -42,10 +39,10 @@ async def create_portfolio(portfolio: PortfolioCreate, credentials: HTTPAuthoriz
 
 
 @router.get("/list")
-async def list_portfolios(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+async def list_portfolios(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()), db: Session = Depends(get_db)):
     try:
         user = _get_user(credentials, db)
-        portfolios = db.query(Portfolio).filter(Portfolio.user_id == user.id).all()
+        portfolios = PortfolioRepository(db).get_by_user_id(user.id)
         return {"portfolios": [{"id": p.id, "name": p.name, "description": p.description, "created_at": p.created_at} for p in portfolios]}
     except HTTPException:
         raise
@@ -55,10 +52,10 @@ async def list_portfolios(credentials: HTTPAuthorizationCredentials = Depends(se
 
 
 @router.get("/holdings", response_model=Dict[str, List[PortfolioHolding]])
-async def get_all_holdings(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+async def get_all_holdings(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()), db: Session = Depends(get_db)):
     try:
         user = _get_user(credentials, db)
-        portfolios = db.query(Portfolio).filter(Portfolio.user_id == user.id).all()
+        portfolios = PortfolioRepository(db).get_by_user_id(user.id)
         all_holdings = []
         for portfolio in portfolios:
             for holding in portfolio.holdings:
@@ -81,10 +78,10 @@ async def get_all_holdings(credentials: HTTPAuthorizationCredentials = Depends(s
 
 
 @router.get("/{portfolio_id}", response_model=PortfolioDetail)
-async def get_portfolio_detail(portfolio_id: int, credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+async def get_portfolio_detail(portfolio_id: int, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()), db: Session = Depends(get_db)):
     try:
         user = _get_user(credentials, db)
-        portfolio = db.query(Portfolio).filter(Portfolio.id == portfolio_id, Portfolio.user_id == user.id).first()
+        portfolio = PortfolioRepository(db).get_by_id_and_user(portfolio_id, user.id)
         if not portfolio:
             raise HTTPException(status_code=404, detail="Portfolio not found")
         holdings_data = []
@@ -110,21 +107,21 @@ async def get_portfolio_detail(portfolio_id: int, credentials: HTTPAuthorization
 
 
 @router.post("/{portfolio_id}/add")
-async def add_portfolio_item(portfolio_id: int, item: HoldingCreate, credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+async def add_portfolio_item(portfolio_id: int, item: HoldingCreate, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()), db: Session = Depends(get_db)):
     try:
         user = _get_user(credentials, db)
-        portfolio = db.query(Portfolio).filter(Portfolio.id == portfolio_id, Portfolio.user_id == user.id).first()
+        portfolio = PortfolioRepository(db).get_by_id_and_user(portfolio_id, user.id)
         if not portfolio:
             raise HTTPException(status_code=404, detail="Portfolio not found")
-        existing_holding = db.query(Holding).filter(Holding.portfolio_id == portfolio.id, Holding.symbol == item.symbol).first()
+        existing_holding = HoldingRepository(db).get_by_portfolio_and_symbol(portfolio.id, item.symbol)
         if existing_holding:
             total_cost = (existing_holding.quantity * existing_holding.average_price) + (item.quantity * item.average_price)
             total_quantity = existing_holding.quantity + item.quantity
             existing_holding.quantity = total_quantity
             existing_holding.average_price = total_cost / total_quantity
+            db.commit()
         else:
-            db.add(Holding(portfolio_id=portfolio.id, symbol=item.symbol, quantity=item.quantity, average_price=item.average_price))
-        db.commit()
+            HoldingRepository(db).create(portfolio_id=portfolio.id, symbol=item.symbol, quantity=item.quantity, average_price=item.average_price)
         return {"success": True, "message": "Stock added to portfolio"}
     except HTTPException:
         raise
@@ -134,17 +131,16 @@ async def add_portfolio_item(portfolio_id: int, item: HoldingCreate, credentials
 
 
 @router.delete("/{portfolio_id}/items/{item_id}")
-async def delete_portfolio_item(portfolio_id: int, item_id: int, credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+async def delete_portfolio_item(portfolio_id: int, item_id: int, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()), db: Session = Depends(get_db)):
     try:
         user = _get_user(credentials, db)
-        portfolio = db.query(Portfolio).filter(Portfolio.id == portfolio_id, Portfolio.user_id == user.id).first()
+        portfolio = PortfolioRepository(db).get_by_id_and_user(portfolio_id, user.id)
         if not portfolio:
             raise HTTPException(status_code=404, detail="Portfolio not found")
-        holding = db.query(Holding).filter(Holding.id == item_id, Holding.portfolio_id == portfolio.id).first()
+        holding = HoldingRepository(db).get_by_id_and_portfolio(item_id, portfolio.id)
         if not holding:
             raise HTTPException(status_code=404, detail="Item not found")
-        db.delete(holding)
-        db.commit()
+        HoldingRepository(db).delete(holding)
         return {"success": True, "message": "Item removed from portfolio"}
     except HTTPException:
         raise
@@ -154,13 +150,13 @@ async def delete_portfolio_item(portfolio_id: int, item_id: int, credentials: HT
 
 
 @router.put("/{portfolio_id}/items/{item_id}")
-async def update_portfolio_item(portfolio_id: int, item_id: int, item_update: HoldingUpdate, credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+async def update_portfolio_item(portfolio_id: int, item_id: int, item_update: HoldingUpdate, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()), db: Session = Depends(get_db)):
     try:
         user = _get_user(credentials, db)
-        portfolio = db.query(Portfolio).filter(Portfolio.id == portfolio_id, Portfolio.user_id == user.id).first()
+        portfolio = PortfolioRepository(db).get_by_id_and_user(portfolio_id, user.id)
         if not portfolio:
             raise HTTPException(status_code=404, detail="Portfolio not found")
-        holding = db.query(Holding).filter(Holding.id == item_id, Holding.portfolio_id == portfolio.id).first()
+        holding = HoldingRepository(db).get_by_id_and_portfolio(item_id, portfolio.id)
         if not holding:
             raise HTTPException(status_code=404, detail="Item not found")
         if item_update.quantity is not None:
@@ -177,7 +173,7 @@ async def update_portfolio_item(portfolio_id: int, item_id: int, item_update: Ho
 
 
 @router.post("/optimize")
-async def optimize_portfolio(request: OptimizationRequest, credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def optimize_portfolio(request: OptimizationRequest, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
     try:
         verify_token(credentials.credentials)
         symbols = request.symbols
