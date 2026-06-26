@@ -11,6 +11,7 @@ from decouple import config
 
 import sentry_sdk
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, Request, HTTPException
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from fastapi.openapi.utils import get_openapi
@@ -126,7 +127,7 @@ class RequestBodyLimitMiddleware(BaseHTTPMiddleware):
         if request.method in ("POST", "PUT", "PATCH"):
             cl = request.headers.get("content-length")
             if cl and int(cl) > 1_048_576:
-                raise HTTPException(status_code=413, detail="Request body too large (max 1MB)")
+                return JSONResponse(status_code=413, content={"detail": "Request body too large (max 1MB)"})
         return await call_next(request)
 
 

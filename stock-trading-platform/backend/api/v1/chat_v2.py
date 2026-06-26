@@ -230,6 +230,7 @@ async def chat_message_v2(
     assistant_chat = ChatHistoryModel(
         user_id=user.id,
         session_id=session.id,
+        message="",
         response=response_text,
         role="assistant",
         context=msg.context,

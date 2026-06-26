@@ -1,0 +1,26 @@
+[run]
+source = .
+omit =
+    tests/*
+    venv/*
+    .venv/*
+    env/*
+    __pycache__/*
+    */__pycache__/*
+    scripts/*
+    comprehensive_indian_stocks.py
+    profile_endpoints.py
+    profile_schemas.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise NotImplementedError
+    if __name__ == "__main__":
+    pass
+    return None
+    raise HTTPException
+
+[html]
+directory = cover_html
