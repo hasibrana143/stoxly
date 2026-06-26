@@ -80,10 +80,10 @@ class UserActivityRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_by_user_id(self, user_id: int) -> UserActivity | None:
+    def get_by_user_id(self, user_id: int, limit: int = 20) -> list[UserActivity]:
         return self.db.query(UserActivity).filter(
             UserActivity.user_id == user_id
-        ).first()
+        ).order_by(UserActivity.created_at.desc()).limit(limit).all()
 
     def create(self, user_id: int, **kwargs) -> UserActivity:
         activity = UserActivity(user_id=user_id, **kwargs)
@@ -128,10 +128,10 @@ class LoginHistoryRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_by_user_id(self, user_id: int) -> list[LoginHistory]:
+    def get_by_user_id(self, user_id: int, limit: int = 10) -> list[LoginHistory]:
         return self.db.query(LoginHistory).filter(
             LoginHistory.user_id == user_id
-        ).order_by(LoginHistory.login_time.desc()).all()
+        ).order_by(LoginHistory.login_time.desc()).limit(limit).all()
 
     def create(self, user_id: int, **kwargs) -> LoginHistory:
         entry = LoginHistory(user_id=user_id, **kwargs)

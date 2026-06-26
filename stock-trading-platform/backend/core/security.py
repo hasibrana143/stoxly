@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import bcrypt
-from jose import JWTError, jwt
+from jose import jwt, JWTError
 from fastapi import HTTPException, status
 
 from core.config import settings

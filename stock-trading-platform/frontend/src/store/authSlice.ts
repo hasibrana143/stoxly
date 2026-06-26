@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 
 interface User {
   id: number;
@@ -19,6 +19,19 @@ const initialState: AuthState = {
   isAuthenticated: !!localStorage.getItem('token'),
   isLoading: false,
 };
+
+export const loadUserFromStorage = createAsyncThunk('auth/loadFromStorage', async () => {
+  const token = localStorage.getItem('token');
+  const userStr = localStorage.getItem('user');
+  let user = null;
+  if (userStr) {
+    try { user = JSON.parse(userStr); } catch {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    }
+  }
+  return { token, user };
+});
 
 const authSlice = createSlice({
   name: 'auth',
@@ -48,24 +61,16 @@ const authSlice = createSlice({
       localStorage.removeItem('token');
       localStorage.removeItem('user');
     },
-    loadUserFromStorage: (state) => {
-      const token = localStorage.getItem('token');
-      const userStr = localStorage.getItem('user');
-      if (token && userStr) {
-        try {
-          const user = JSON.parse(userStr);
-          state.user = user;
-          state.token = token;
-          state.isAuthenticated = true;
-        } catch (error) {
-          // Invalid stored data, clear it
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-        }
-      }
-    },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(loadUserFromStorage.fulfilled, (state, action) => {
+      const { token, user } = action.payload;
+      state.token = token;
+      state.user = user;
+      state.isAuthenticated = !!token;
+    });
   },
 });
 
-export const { loginStart, loginSuccess, loginFailure, logout, loadUserFromStorage } = authSlice.actions;
+export const { loginStart, loginSuccess, loginFailure, logout } = authSlice.actions;
 export default authSlice.reducer;

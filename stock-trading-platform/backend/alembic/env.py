@@ -6,7 +6,6 @@ from sqlalchemy import pool
 from alembic import context
 
 from core.config import settings
-from core.database import engine
 from database import Base
 from models import (
     User, Portfolio, Stock, Transaction, InvestmentProfile, IndianStock,

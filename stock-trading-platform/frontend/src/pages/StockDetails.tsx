@@ -26,7 +26,6 @@ import {
   useRemoveFromWatchlistMutation
 } from '../services/api';
 import { useAppDispatch, useAppSelector } from '../hooks/redux';
-// import { addToWatchlist, removeFromWatchlist } from '../store/stockSlice'; // Removed local actions
 import {
   ChartBarIcon,
   ArrowTrendingUpIcon,

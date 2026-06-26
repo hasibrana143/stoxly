@@ -76,6 +76,8 @@ const Step1: React.FC<StepProps> = React.memo(({ formData, setFormData }) => (
   </motion.div>
 ));
 
+const colorClasses: Record<string, string> = { green: 'border-green-500 bg-green-50', yellow: 'border-yellow-500 bg-yellow-50', red: 'border-red-500 bg-red-50' };
+
 // Step 2 – Risk Level
 const Step2: React.FC<StepProps> = React.memo(({ formData, setFormData }) => (
   <motion.div
@@ -119,7 +121,7 @@ const Step2: React.FC<StepProps> = React.memo(({ formData, setFormData }) => (
           <label className="cursor-pointer">
             <div
               className={`p-4 border-2 rounded-lg transition-colors ${formData.risk_level === option.value
-                ? `border-${option.color}-500 bg-${option.color}-50`
+                ? colorClasses[option.color] || ''
                 : 'border-gray-200 hover:border-gray-300'}`}
             >
               <div className="flex items-start">

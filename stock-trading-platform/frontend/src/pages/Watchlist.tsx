@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { useGetWatchlistQuery, useRemoveFromWatchlistMutation } from '../services/api';
-import Navbar from '../components/Layout/Navbar';
 import { Link } from 'react-router-dom';
 
 const Watchlist: React.FC = () => {
@@ -26,7 +25,6 @@ const Watchlist: React.FC = () => {
     if (isLoading) {
         return (
             <div className="min-h-screen bg-gray-50">
-                <Navbar />
                 <div className="flex justify-center items-center h-[calc(100vh-64px)]">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
                 </div>
@@ -37,7 +35,6 @@ const Watchlist: React.FC = () => {
     if (error) {
         return (
             <div className="min-h-screen bg-gray-50">
-                <Navbar />
                 <div className="container mx-auto px-4 py-8">
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
                         <strong className="font-bold">Error!</strong>
@@ -58,7 +55,6 @@ const Watchlist: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <Navbar />
             <div className="container mx-auto px-4 py-8">
                 <div className="flex justify-between items-center mb-8">
                     <div>

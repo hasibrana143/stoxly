@@ -44,6 +44,8 @@ interface ScreenerFilters {
   limit?: number;
 }
 
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
+
 const Screener: React.FC = () => {
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [loading, setLoading] = useState(false);
@@ -86,7 +88,7 @@ const Screener: React.FC = () => {
     const run = async () => {
       setLoading(true);
       try {
-        const response = await fetch('http://localhost:8000/api/screener/screen', {
+        const response = await fetch(`${API_BASE}/screener/screen`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(filters)
@@ -110,7 +112,7 @@ const Screener: React.FC = () => {
   useEffect(() => {
     const loadSaved = async () => {
       try {
-        const resp = await fetch('http://localhost:8000/api/screener/filters/list', {
+        const resp = await fetch(`${API_BASE}/screener/filters/list`, {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         });
         if (resp.ok) {
@@ -273,7 +275,7 @@ const Screener: React.FC = () => {
                   onClick={async () => {
                     if (!filterName.trim()) return;
                     try {
-                      const resp = await fetch('http://localhost:8000/api/screener/filters/save', {
+                      const resp = await fetch(`${API_BASE}/screener/filters/save`, {
                         method: 'POST',
                         headers: {
                           'Content-Type': 'application/json',

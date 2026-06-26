@@ -101,8 +101,7 @@ class RealStockDataProvider:
         # Find stock in database
         stock = next((s for s in INDIAN_STOCKS_DATABASE if s["symbol"] == symbol), None)
         if not stock:
-            stock = {"symbol": symbol, "name": symbol, "sector": "Unknown", "exchange": "NSE", 
-                     "market_cap_category": "Unknown", "is_nifty50": False, "is_nifty100": False}
+            raise ValueError(f"Stock not found: {symbol}")
         
         # Use simulated data for stocks known to fail on yfinance
         if symbol in self.SKIP_YFINANCE:

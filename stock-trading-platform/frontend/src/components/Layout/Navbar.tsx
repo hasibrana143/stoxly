@@ -5,6 +5,8 @@ import AiChatModal from './AiChatModal';
 import { useAppSelector, useAppDispatch } from '../../hooks/redux';
 import { logout } from '../../store/authSlice';
 
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
+
 const Navbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -68,7 +70,7 @@ const Navbar: React.FC = () => {
                 onKeyDown={async (e) => {
                   if (e.key === 'Enter' && query.trim().length > 0) {
                     try {
-                      const resp = await fetch(`http://localhost:8000/api/stocks/search/${encodeURIComponent(query.trim())}`);
+                      const resp = await fetch(`${API_BASE}/stocks/search/${encodeURIComponent(query.trim())}`);
                       if (resp.ok) {
                         const data = await resp.json();
                         const first = data.stocks && data.stocks[0];
