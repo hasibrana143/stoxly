@@ -3,3 +3,11 @@ __pycache__
 .env
 *.db
 .git
+.gitignore
+cover_html
+.vscode
+.idea
+logs
+*.log
+.pytest_cache
+*.egg-info
