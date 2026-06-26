@@ -1,5 +1,7 @@
+import sys
 from decouple import config
 from typing import List
+
 
 class Settings:
     APP_NAME: str = "Stoxly.ai API"
@@ -8,7 +10,7 @@ class Settings:
 
     DATABASE_URL: str = config('DATABASE_URL', default='sqlite:///./stock_platform.db')
 
-    SECRET_KEY: str = config('SECRET_KEY', default='change-me-in-production')
+    SECRET_KEY: str = config('SECRET_KEY', default='')
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
@@ -18,4 +20,10 @@ class Settings:
     ALPHA_VANTAGE_API_KEY: str | None = config('ALPHA_VANTAGE_API_KEY', default=None)
     SENTRY_DSN: str | None = config('SENTRY_DSN', default=None)
 
+
 settings = Settings()
+
+if not settings.SECRET_KEY or settings.SECRET_KEY in ('change-me-in-production', 'your-secret-key-here-change-in-production'):
+    if not settings.DEBUG:
+        print("FATAL: SECRET_KEY is not set. Set a strong SECRET_KEY in production.", file=sys.stderr)
+        sys.exit(1)

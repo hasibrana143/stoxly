@@ -19,6 +19,7 @@ from core.security import get_password_hash
 from models import User, create_tables
 from middleware.error_handler import global_exception_handler
 from middleware.rate_limiter import RateLimitMiddleware
+from middleware.security_headers import SecurityHeadersMiddleware
 from comprehensive_indian_stocks import mock_provider
 
 logging.basicConfig(level=logging.INFO)
@@ -99,7 +100,8 @@ app = FastAPI(title=settings.APP_NAME, description="Stoxly.ai - Indian stock tra
 app.add_exception_handler(Exception, global_exception_handler)
 
 app.add_middleware(CORSMiddleware, allow_origins=settings.CORS_ORIGINS, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
-app.add_middleware(RateLimitMiddleware, max_requests=100, window_seconds=60)
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 
 
 @app.middleware("http")
