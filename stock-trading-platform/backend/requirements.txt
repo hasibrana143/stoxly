@@ -13,4 +13,4 @@ scikit-learn
 yfinance
 python-decouple
 openai
-google-generativeai
+google-genai

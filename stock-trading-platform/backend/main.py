@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 
 from database import get_db, engine
 from decouple import config
-import google.generativeai as genai
+from google import genai
 from models import (
     User, Portfolio, Stock, Transaction, InvestmentProfile as DBInvestmentProfile, 
     IndianStock, UserRecommendation, ChatHistory, UserScreenerFilter, create_tables, Holding, WatchList
@@ -36,6 +36,7 @@ from screener_service import screener_service
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
+logging.getLogger('yfinance').setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
@@ -78,9 +79,10 @@ app = FastAPI(
 )
 
 # CORS Middleware
+CORS_ORIGINS = config('CORS_ORIGINS', default='http://localhost:3000')
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS.split(','),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -1091,9 +1093,8 @@ async def chat_with_ai(
         GEMINI_API_KEY = config('GEMINI_API_KEY', default=None)
         if GEMINI_API_KEY:
             try:
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                client = genai.Client(api_key=GEMINI_API_KEY)
                 
-                # Construct prompt with context
                 context = f"User Message: {message.message}\n"
                 
                 if found_stocks:
@@ -1108,7 +1109,7 @@ async def chat_with_ai(
                 
                 prompt = f"{system_instruction}\n\n{context}\n\nAnswer:"
                 
-                response = model.generate_content(prompt)
+                response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
                 response_text = response.text
                 gemini_success = True
                 

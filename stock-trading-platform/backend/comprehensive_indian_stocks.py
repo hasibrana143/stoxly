@@ -341,60 +341,43 @@ class RealStockDataProvider:
             print(f"Bulk update failed: {e}")
 
     def get_all_stocks(self) -> List[Dict[str, Any]]:
-        """Get all stocks with current prices using bulk fetching"""
-        import pandas as pd
-        
-        # Check if we need to update prices
-        # If cache is empty or stale for many stocks, trigger bulk update
-        should_update = False
-        if not self.price_cache:
-            should_update = True
-        else:
-            # Check a few random stocks to see if they are stale
-            sample_stocks = random.sample(INDIAN_STOCKS_DATABASE, min(5, len(INDIAN_STOCKS_DATABASE)))
-            stale_count = sum(1 for s in sample_stocks if self._should_update_price(s["symbol"]))
-            if stale_count > 0:
-                should_update = True
-        
-        if should_update:
-            self.update_bulk_prices()
-            
+        """Get all stocks with simulated real-time price movements (avoids yfinance rate limits)"""
         all_stocks = []
         
         for stock in INDIAN_STOCKS_DATABASE:
             symbol = stock["symbol"]
+            base_price = stock.get("base_price", 0.0)
+            if base_price == 0:
+                base_price = random.uniform(50, 3000)
             
-            # If in cache, use it
-            if symbol in self.price_cache:
-                all_stocks.append(self.price_cache[symbol])
-            else:
-                # If not in cache (bulk fetch failed for this one), try fallback
-                # Use base price directly to avoid slow individual fetch during list view
-                base_price = stock.get("base_price", 0.0)
-                
-                # Try Alpha Vantage if base price is 0 (optional, might slow down)
-                # For list view, speed is key. Let's stick to base price or cached value.
-                
-                fallback_data = {
-                    "symbol": stock["symbol"],
-                    "name": stock["name"],
-                    "current_price": base_price,
-                    "previous_close": base_price,
-                    "change": 0.0,
-                    "change_percent": 0.0,
-                    "volume": 0,
-                    "market_cap": 0,
-                    "sector": stock["sector"],
-                    "exchange": stock["exchange"],
-                    "market_cap_category": stock["market_cap_category"],
-                    "is_nifty50": stock["is_nifty50"],
-                    "is_nifty100": stock["is_nifty100"]
-                }
-                all_stocks.append(fallback_data)
-                
-                # Update cache with fallback so we don't retry immediately
-                self.price_cache[symbol] = fallback_data
-                self.last_update[symbol] = time.time()
+            # Simulate price movement (random walk)
+            change_percent = random.uniform(-2.0, 2.0)
+            change = base_price * change_percent / 100
+            current_price = base_price + change
+            
+            if current_price <= 0:
+                current_price = base_price
+                change = 0
+                change_percent = 0
+            
+            price_data = {
+                "symbol": symbol,
+                "name": stock["name"],
+                "current_price": round(current_price, 2),
+                "previous_close": round(base_price, 2),
+                "change": round(change, 2),
+                "change_percent": round(change_percent, 2),
+                "volume": random.randint(100000, 50000000),
+                "market_cap": round(base_price * random.randint(50000000, 500000000)),
+                "sector": stock["sector"],
+                "exchange": stock["exchange"],
+                "market_cap_category": stock["market_cap_category"],
+                "is_nifty50": stock["is_nifty50"],
+                "is_nifty100": stock["is_nifty100"]
+            }
+            
+            self.price_cache[symbol] = price_data
+            all_stocks.append(price_data)
         
         return all_stocks
 
