@@ -20,7 +20,9 @@ from core.config import settings
 from core.database import get_db, engine
 from core.security import get_password_hash, verify_token
 from models import User, create_tables
+from middleware.csrf import CSRFMiddleware
 from middleware.error_handler import global_exception_handler
+from middleware.ip_abuse import IPAbuseMiddleware
 from middleware.rate_limiter import RateLimitMiddleware
 from middleware.security_headers import SecurityHeadersMiddleware
 from core.redis_client import close_redis
@@ -107,8 +109,10 @@ app = FastAPI(title=settings.APP_NAME, description="Stoxly.ai - Indian stock tra
 app.add_exception_handler(Exception, global_exception_handler)
 
 app.add_middleware(CORSMiddleware, allow_origins=settings.CORS_ORIGINS, allow_credentials=True, allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"])
+app.add_middleware(IPAbuseMiddleware)
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(CSRFMiddleware)
 
 
 class RequestBodyLimitMiddleware(BaseHTTPMiddleware):
@@ -155,13 +159,14 @@ def custom_openapi():
 
 app.openapi = custom_openapi
 
-from api.v1 import auth, stocks, portfolio, watchlist, screener, indian_stocks, chat, profile, recommendations
+from api.v1 import auth, csrf, stocks, portfolio, watchlist, screener, indian_stocks, chat, profile, recommendations
 from api.v1 import technical_indicators, stock_analysis, sector_performance
 from api.v1 import portfolio_optimizer_routes, price_alerts, comparator
 from api.v1 import ipo_calendar, paper_trading, dashboard, export_routes, search_route
 from api.v1 import chat_v2, i18n
 
 app.include_router(auth.router)
+app.include_router(csrf.router)
 app.include_router(stocks.router)
 app.include_router(portfolio.router)
 app.include_router(watchlist.router)

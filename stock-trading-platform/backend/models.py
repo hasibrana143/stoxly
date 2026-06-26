@@ -12,6 +12,7 @@ class User(Base):
     email = Column(String(100), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
+    role = Column(String(20), default="free")  # free, premium, pro, admin
     is_email_verified = Column(Boolean, default=False)
     email_verification_token = Column(String(255), nullable=True)
     totp_secret = Column(String(64), nullable=True)

@@ -34,6 +34,10 @@ class Settings:
     SMTP_PASSWORD: Optional[str] = config('SMTP_PASSWORD', default=None)
     SMTP_FROM: Optional[str] = config('SMTP_FROM', default='noreply@stoxly.ai')
 
+    IP_ABUSE_THRESHOLD: int = 100
+    IP_ABUSE_WINDOW: int = 60
+    IP_ABUSE_BLOCK_DURATION: int = 300
+
     SSL_CERT_PATH: Optional[str] = config('SSL_CERT_PATH', default=None)
     SSL_KEY_PATH: Optional[str] = config('SSL_KEY_PATH', default=None)
 

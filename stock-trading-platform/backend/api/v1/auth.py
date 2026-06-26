@@ -12,6 +12,8 @@ from core.config import settings
 from jose import jwt, JWTError
 from core.security import create_access_token, get_password_hash, verify_password
 from core.security_extras import brute_force_protection, validate_password, sanitize_input
+from core.audit import audit_log
+from core.session import blacklist_token
 from repositories.user_repository import UserRepository
 from services.totp_service import generate_totp_secret, get_totp_uri, generate_qr_code_base64, verify_totp
 from services.captcha_service import verify_recaptcha
@@ -57,6 +59,7 @@ async def register(user: UserCreate, db: Session = Depends(get_db)):
     refresh_token = create_access_token(data={"sub": db_user.email, "type": "refresh"}, expires_minutes=1440)
 
     logger.info(f"User registered: {user.email}")
+    audit_log("user.register", user=db_user.email)
     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer", "user": {"id": db_user.id, "username": db_user.username, "email": db_user.email}}
 
 
@@ -109,6 +112,7 @@ async def login(user: UserLogin, db: Session = Depends(get_db)):
     if not db_user or not verify_password(user.password, db_user.hashed_password):
         brute_force_protection.record_attempt(lock_key, success=False)
         logger.warning(f"Failed login attempt: {user.email}")
+        audit_log("user.login", user=user.email, details={"success": False, "reason": "invalid_credentials"})
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     brute_force_protection.reset(lock_key)
@@ -125,6 +129,7 @@ async def login(user: UserLogin, db: Session = Depends(get_db)):
     refresh_token = create_access_token(data={"sub": db_user.email, "type": "refresh"}, expires_minutes=1440)
 
     logger.info(f"User logged in: {user.email}")
+    audit_log("user.login", user=user.email, details={"success": True})
     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer", "user": {"id": db_user.id, "username": db_user.username, "email": db_user.email}}
 
 
@@ -205,6 +210,18 @@ async def disable_2fa(password: str = Body(...), credentials: HTTPAuthorizationC
     return {"message": "2FA disabled successfully"}
 
 
+@router.post("/logout")
+async def logout(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    blacklist_token(credentials.credentials)
+    audit_log("user.logout", user="unknown")
+    return {"message": "Logged out successfully"}
+
+
+@router.post("/logout-all")
+async def logout_all(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    return {"message": "Not available without Redis"}
+
+
 @router.post("/refresh")
 async def refresh_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     try:
@@ -258,4 +275,5 @@ async def change_password(old_password: str = Body(...), new_password: str = Bod
 
     db.commit()
     logger.info(f"Password changed: {email}")
+    audit_log("user.password_change", user=email)
     return {"message": "Password changed successfully"}
