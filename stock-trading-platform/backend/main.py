@@ -153,6 +153,10 @@ def custom_openapi():
 app.openapi = custom_openapi
 
 from api.v1 import auth, stocks, portfolio, watchlist, screener, indian_stocks, chat, profile, recommendations
+from api.v1 import technical_indicators, stock_analysis, sector_performance
+from api.v1 import portfolio_optimizer_routes, price_alerts, comparator
+from api.v1 import ipo_calendar, paper_trading, dashboard, export_routes, search_route
+from api.v1 import chat_v2, i18n
 
 app.include_router(auth.router)
 app.include_router(stocks.router)
@@ -163,6 +167,20 @@ app.include_router(indian_stocks.router)
 app.include_router(chat.router)
 app.include_router(profile.router)
 app.include_router(recommendations.router)
+
+app.include_router(technical_indicators.router)
+app.include_router(stock_analysis.router)
+app.include_router(sector_performance.router)
+app.include_router(portfolio_optimizer_routes.router)
+app.include_router(price_alerts.router)
+app.include_router(comparator.router)
+app.include_router(ipo_calendar.router)
+app.include_router(paper_trading.router)
+app.include_router(dashboard.router)
+app.include_router(export_routes.router)
+app.include_router(search_route.router)
+app.include_router(chat_v2.router)
+app.include_router(i18n.router)
 
 import profile_endpoints
 app.include_router(profile_endpoints.router)
