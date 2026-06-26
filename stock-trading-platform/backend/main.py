@@ -1,5 +1,7 @@
 import asyncio
 import json
+import os
+import time
 import logging
 import uuid
 from contextlib import asynccontextmanager
@@ -10,7 +12,7 @@ from decouple import config
 import sentry_sdk
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
+
 from fastapi.openapi.utils import get_openapi
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -19,18 +21,21 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from core.config import settings
 from core.database import get_db, engine
 from core.security import get_password_hash, verify_token
+from core.logger import setup_logging, get_logger
+from core.metrics import metrics_endpoint
 from models import User, create_tables
 from middleware.csrf import CSRFMiddleware
 from middleware.error_handler import global_exception_handler
 from middleware.ip_abuse import IPAbuseMiddleware
 from middleware.rate_limiter import RateLimitMiddleware
+from middleware.request_logger import RequestLoggingMiddleware
 from middleware.security_headers import SecurityHeadersMiddleware
 from core.redis_client import close_redis
 from comprehensive_indian_stocks import mock_provider
 
-logging.basicConfig(level=logging.INFO)
+setup_logging()
 logging.getLogger('yfinance').setLevel(logging.WARNING)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ConnectionManager:
@@ -113,6 +118,7 @@ app.add_middleware(IPAbuseMiddleware)
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(CSRFMiddleware)
+app.add_middleware(RequestLoggingMiddleware)
 
 
 class RequestBodyLimitMiddleware(BaseHTTPMiddleware):
@@ -136,6 +142,14 @@ async def add_request_id(request: Request, call_next):
     return response
 
 
+_start_time = time.time()
+
+
+@app.get("/metrics")
+async def metrics():
+    return await metrics_endpoint()
+
+
 @app.get("/api/v1/health")
 async def health_check():
     db_ok = False
@@ -145,7 +159,18 @@ async def health_check():
             db_ok = True
     except Exception:
         pass
-    return {"status": "healthy" if db_ok else "degraded", "database": "connected" if db_ok else "disconnected", "timestamp": datetime.utcnow().isoformat(), "version": settings.VERSION, "environment": "production" if not settings.DEBUG else "development"}
+    uptime_seconds = time.time() - _start_time
+    process = os.getpid()
+    return {
+        "status": "healthy" if db_ok else "degraded",
+        "database": "connected" if db_ok else "disconnected",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": settings.VERSION,
+        "environment": "production" if not settings.DEBUG else "development",
+        "uptime_seconds": round(uptime_seconds, 2),
+        "process_id": process,
+        "active_websockets": len(manager.active_connections),
+    }
 
 
 def custom_openapi():
