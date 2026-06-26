@@ -15,6 +15,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["Chat"])
 
 
+def _normalize_symbol(s: str) -> str:
+    return s.replace('.NS', '').replace('.BO', '').replace('.BSE', '')
+
+
 @router.post("/chat", response_model=PersonalizedChatResponse)
 async def chat_with_ai(message: PersonalizedChatMessage, db: Session = Depends(get_db)):
     try:
@@ -35,7 +39,7 @@ async def chat_with_ai(message: PersonalizedChatMessage, db: Session = Depends(g
             if stock["symbol"].lower() in user_msg or clean_name in user_msg or user_msg in clean_name:
                 try:
                     from comprehensive_indian_stocks import mock_provider
-                    live_data = mock_provider.get_current_price(stock["symbol"])
+                    live_data = mock_provider.get_current_price(_normalize_symbol(stock["symbol"]))
                     found_stocks.append(live_data)
                 except Exception as e:
                     logger.error(f"Error fetching live data for {stock['symbol']}: {e}")

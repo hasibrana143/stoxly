@@ -5,6 +5,7 @@ import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import List
+from decouple import config
 
 import sentry_sdk
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, Request, HTTPException
@@ -73,14 +74,16 @@ async def lifespan(app: FastAPI):
 
     db = next(get_db())
     try:
-        demo_email = "demo@stoxly.ai"
-        user = db.query(User).filter(User.email == demo_email).first()
-        if not user:
-            logger.info("Creating demo user")
-            hashed_password = get_password_hash("demo123")
-            demo_user = User(username="Demo User", email=demo_email, hashed_password=hashed_password)
-            db.add(demo_user)
-            db.commit()
+        demo_email = config('DEMO_USER_EMAIL', default=None)
+        demo_password = config('DEMO_USER_PASSWORD', default=None)
+        if demo_email and demo_password and settings.DEBUG:
+            user = db.query(User).filter(User.email == demo_email).first()
+            if not user:
+                logger.info(f"Creating demo user: {demo_email}")
+                hashed_password = get_password_hash(demo_password)
+                demo_user = User(username="Demo User", email=demo_email, hashed_password=hashed_password, is_email_verified=True)
+                db.add(demo_user)
+                db.commit()
     except Exception as e:
         logger.error(f"Error creating demo user: {e}")
     finally:
@@ -211,4 +214,4 @@ if __name__ == "__main__":
     if settings.SSL_CERT_PATH and settings.SSL_KEY_PATH:
         ssl_kwargs["ssl_certfile"] = settings.SSL_CERT_PATH
         ssl_kwargs["ssl_keyfile"] = settings.SSL_KEY_PATH
-    uvicorn.run(app, host="0.0.0.0", port=8001, reload=settings.DEBUG, **ssl_kwargs)
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=settings.DEBUG, **ssl_kwargs)

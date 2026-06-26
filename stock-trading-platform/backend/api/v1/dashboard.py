@@ -20,6 +20,10 @@ router = APIRouter(prefix="/api/v1/dashboard", tags=["Dashboard"])
 security = HTTPBearer()
 
 
+def _normalize_symbol(s: str) -> str:
+    return s.replace('.NS', '').replace('.BO', '').replace('.BSE', '')
+
+
 def _get_user(credentials: HTTPAuthorizationCredentials, db: Session):
     user_email = verify_token(credentials.credentials)
     user = UserRepository(db).get_by_email(user_email)
@@ -44,7 +48,7 @@ def _compute_market_snapshot():
 
     for s in nifty_stocks:
         try:
-            price_data = mock_provider.get_current_price(s["symbol"])
+            price_data = mock_provider.get_current_price(_normalize_symbol(s["symbol"]))
             cp = price_data.get("current_price", 0)
             chg = price_data.get("change_percent", 0)
             vol = price_data.get("volume", 0)
@@ -68,7 +72,7 @@ def _compute_market_snapshot():
 
     for s in sensex_stocks:
         try:
-            price_data = mock_provider.get_current_price(s["symbol"])
+            price_data = mock_provider.get_current_price(_normalize_symbol(s["symbol"]))
             sensex_total += price_data.get("current_price", 0)
         except Exception:
             continue
@@ -103,7 +107,7 @@ async def get_dashboard_summary(credentials: HTTPAuthorizationCredentials = Depe
         for portfolio in portfolios:
             for holding in portfolio.holdings:
                 try:
-                    price_data = mock_provider.get_current_price(holding.symbol)
+                    price_data = mock_provider.get_current_price(_normalize_symbol(holding.symbol))
                     current_price = price_data["current_price"]
                     name = price_data.get("name", holding.symbol)
                     change_pct = price_data.get("change_percent", 0)
@@ -223,7 +227,7 @@ async def get_portfolio_summary(portfolio_id: int, credentials: HTTPAuthorizatio
 
         for holding in portfolio.holdings:
             try:
-                price_data = mock_provider.get_current_price(holding.symbol)
+                price_data = mock_provider.get_current_price(_normalize_symbol(holding.symbol))
                 current_price = price_data["current_price"]
                 name = price_data.get("name", holding.symbol)
                 change_pct = price_data.get("change_percent", 0)

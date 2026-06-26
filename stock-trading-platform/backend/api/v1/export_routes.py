@@ -21,6 +21,10 @@ router = APIRouter(prefix="/api/v1/export", tags=["Export"])
 security = HTTPBearer()
 
 
+def _normalize_symbol(s: str) -> str:
+    return s.replace('.NS', '').replace('.BO', '').replace('.BSE', '')
+
+
 def _get_user(credentials: HTTPAuthorizationCredentials, db: Session):
     user_email = verify_token(credentials.credentials)
     user = UserRepository(db).get_by_email(user_email)
@@ -40,7 +44,7 @@ async def export_portfolio_csv_endpoint(portfolio_id: int, credentials: HTTPAuth
         holdings_data = []
         for holding in portfolio.holdings:
             try:
-                price_data = mock_provider.get_current_price(holding.symbol)
+                price_data = mock_provider.get_current_price(_normalize_symbol(holding.symbol))
                 current_price = price_data["current_price"]
                 name = price_data.get("name", holding.symbol)
             except Exception:
@@ -113,7 +117,7 @@ async def export_watchlist_csv_endpoint(credentials: HTTPAuthorizationCredential
             stock = StockRepository(db).get_by_id(item.stock_id)
             if not stock:
                 continue
-            price_data = mock_provider.get_current_price(stock.symbol)
+            price_data = mock_provider.get_current_price(_normalize_symbol(stock.symbol))
             wl_data.append({
                 "symbol": stock.symbol,
                 "name": stock.name,
@@ -149,7 +153,7 @@ async def export_portfolio_report(portfolio_id: int, format: str = Query("json",
 
         for holding in portfolio.holdings:
             try:
-                price_data = mock_provider.get_current_price(holding.symbol)
+                price_data = mock_provider.get_current_price(_normalize_symbol(holding.symbol))
                 current_price = price_data["current_price"]
                 name = price_data.get("name", holding.symbol)
             except Exception:

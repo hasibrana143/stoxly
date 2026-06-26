@@ -14,6 +14,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/watchlist", tags=["Watchlist"])
 
 
+def _normalize_symbol(s: str) -> str:
+    return s.replace('.NS', '').replace('.BO', '').replace('.BSE', '')
+
+
 @router.get("")
 async def get_watchlist(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()), db: Session = Depends(get_db)):
     try:
@@ -26,7 +30,7 @@ async def get_watchlist(credentials: HTTPAuthorizationCredentials = Depends(HTTP
         for item in watchlist_items:
             stock = StockRepository(db).get_by_id(item.stock_id)
             if stock:
-                price_data = mock_provider.get_current_price(stock.symbol)
+                price_data = mock_provider.get_current_price(_normalize_symbol(stock.symbol))
                 result.append({"id": item.id, "stock_id": stock.id, "symbol": stock.symbol, "name": stock.name, "current_price": price_data.get("current_price", 0), "change": price_data.get("change", 0), "change_percent": price_data.get("change_percent", 0), "market_cap": price_data.get("market_cap", 0), "pe_ratio": price_data.get("pe_ratio", 0)})
         return {"watchlist": result}
     except HTTPException:
@@ -48,7 +52,7 @@ async def add_to_watchlist(payload: Dict[str, str], credentials: HTTPAuthorizati
             raise HTTPException(status_code=400, detail="Symbol is required")
         stock = StockRepository(db).get_by_symbol(symbol)
         if not stock:
-            stock_data = mock_provider.get_current_price(symbol)
+            stock_data = mock_provider.get_current_price(_normalize_symbol(symbol))
             stock = StockRepository(db).create(symbol=symbol, name=stock_data.get("name", symbol), exchange=stock_data.get("exchange", "NSE"), sector=stock_data.get("sector", "Unknown"), market_cap=stock_data.get("market_cap", 0))
         existing = WatchListRepository(db).get_by_user_and_stock(user.id, stock.id)
         if existing:

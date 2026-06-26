@@ -14,12 +14,11 @@ from repositories.user_repository import UserRepository
 from repositories.portfolio_repository import PortfolioRepository
 from services.ai_analysis import analyze_stock
 from comprehensive_indian_stocks import mock_provider
+from models import ChatHistory as ChatHistoryModel, ChatSession
 
 router = APIRouter(prefix="/api/v1/chat", tags=["AI Chat"])
 security = HTTPBearer()
 logger = logging.getLogger(__name__)
-
-_chat_sessions: dict = {}
 
 class ChatMessage(BaseModel):
     message: str
@@ -30,7 +29,7 @@ class ChatResponse(BaseModel):
     suggestions: Optional[List[str]] = None
     timestamp: str
 
-class ChatHistory(BaseModel):
+class ChatHistoryResponse(BaseModel):
     messages: List[dict]
     total: int
 
@@ -187,8 +186,31 @@ async def chat_message_v2(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ):
-    token_data = verify_token(credentials.credentials)
-    user_email = token_data.get("sub") or token_data.get("email", "unknown")
+    user_email = verify_token(credentials.credentials)
+    user_repo = UserRepository(db)
+    user = user_repo.get_by_email(user_email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    session = db.query(ChatSession).filter(
+        ChatSession.user_id == user.id
+    ).order_by(ChatSession.created_at.desc()).first()
+
+    if not session:
+        session = ChatSession(user_id=user.id)
+        db.add(session)
+        db.commit()
+        db.refresh(session)
+
+    user_chat = ChatHistoryModel(
+        user_id=user.id,
+        session_id=session.id,
+        message=msg.message,
+        role="user",
+        context=msg.context,
+    )
+    db.add(user_chat)
+    db.commit()
 
     portfolio_summary = ""
     if msg.context == "portfolio":
@@ -203,25 +225,17 @@ async def chat_message_v2(
     )
 
     response_text = await _get_ai_response(msg.message, system_context)
-
     suggestions = CONTEXTUAL_SUGGESTIONS.get(msg.context, CONTEXTUAL_SUGGESTIONS["general"])
 
-    if user_email not in _chat_sessions:
-        _chat_sessions[user_email] = []
-    _chat_sessions[user_email].append({
-        "role": "user",
-        "message": msg.message,
-        "context": msg.context,
-        "timestamp": datetime.utcnow().isoformat(),
-    })
-    _chat_sessions[user_email].append({
-        "role": "assistant",
-        "message": response_text,
-        "timestamp": datetime.utcnow().isoformat(),
-    })
-
-    if len(_chat_sessions[user_email]) > 200:
-        _chat_sessions[user_email] = _chat_sessions[user_email][-200:]
+    assistant_chat = ChatHistoryModel(
+        user_id=user.id,
+        session_id=session.id,
+        response=response_text,
+        role="assistant",
+        context=msg.context,
+    )
+    db.add(assistant_chat)
+    db.commit()
 
     return ChatResponse(
         response=response_text,
@@ -233,25 +247,50 @@ async def chat_message_v2(
 @router.get("/v2/history")
 async def get_chat_history_v2(
     credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
     limit: int = 50,
 ):
-    token_data = verify_token(credentials.credentials)
-    user_email = token_data.get("sub") or token_data.get("email", "unknown")
+    user_email = verify_token(credentials.credentials)
+    user_repo = UserRepository(db)
+    user = user_repo.get_by_email(user_email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
-    messages = _chat_sessions.get(user_email, [])
-    limited = messages[-limit:] if len(messages) > limit else messages
+    records = (
+        db.query(ChatHistoryModel)
+        .filter(ChatHistoryModel.user_id == user.id)
+        .order_by(ChatHistoryModel.created_at.desc())
+        .limit(limit)
+        .all()
+    )
 
-    return ChatHistory(messages=limited, total=len(messages))
+    messages = []
+    for r in reversed(records):
+        messages.append({
+            "role": r.role,
+            "message": r.message if r.role == "user" else r.response,
+            "context": r.context,
+            "timestamp": r.created_at.isoformat(),
+        })
+
+    return ChatHistoryResponse(messages=messages, total=len(messages))
 
 
 @router.delete("/v2/history")
 async def clear_chat_history_v2(
     credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
 ):
-    token_data = verify_token(credentials.credentials)
-    user_email = token_data.get("sub") or token_data.get("email", "unknown")
+    user_email = verify_token(credentials.credentials)
+    user_repo = UserRepository(db)
+    user = user_repo.get_by_email(user_email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
-    _chat_sessions.pop(user_email, None)
+    db.query(ChatHistoryModel).filter(ChatHistoryModel.user_id == user.id).delete()
+    db.query(ChatSession).filter(ChatSession.user_id == user.id).delete()
+    db.commit()
+
     return {"status": "success", "message": "Chat history cleared"}
 
 

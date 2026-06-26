@@ -29,6 +29,9 @@ def _generate_sample_prices(current_price: float, days: int = 100) -> List[float
     return prices
 
 
+def _normalize_symbol(symbol: str) -> str:
+    return symbol.replace('.NS', '').replace('.BO', '').replace('.BSE', '')
+
 def _generate_ohlcv(current_price: float, days: int = 100):
     closes = _generate_sample_prices(current_price, days)
     highs = []
@@ -49,7 +52,7 @@ async def get_technical_indicators(
 ):
     """Get all technical indicators for a stock"""
     try:
-        stock = mock_provider.get_current_price(symbol)
+        stock = mock_provider.get_current_price(_normalize_symbol(symbol))
         current_price = stock["current_price"]
         closes, highs, lows, volumes = _generate_ohlcv(current_price)
 
@@ -109,7 +112,7 @@ async def get_technical_indicators(
 async def get_sma(symbol: str, period: int = 20):
     """Simple Moving Average"""
     try:
-        stock = mock_provider.get_current_price(symbol)
+        stock = mock_provider.get_current_price(_normalize_symbol(symbol))
         closes, _, _, _ = _generate_ohlcv(stock["current_price"])
         sma = calculate_sma(closes, period)
         return {"symbol": symbol, "period": period, "value": sma[-1] if sma else None, "series": sma}
@@ -124,7 +127,7 @@ async def get_sma(symbol: str, period: int = 20):
 async def get_ema(symbol: str, period: int = 20):
     """Exponential Moving Average"""
     try:
-        stock = mock_provider.get_current_price(symbol)
+        stock = mock_provider.get_current_price(_normalize_symbol(symbol))
         closes, _, _, _ = _generate_ohlcv(stock["current_price"])
         ema = calculate_ema(closes, period)
         return {"symbol": symbol, "period": period, "value": ema[-1] if ema else None, "series": ema}
@@ -139,7 +142,7 @@ async def get_ema(symbol: str, period: int = 20):
 async def get_rsi(symbol: str, period: int = 14):
     """Relative Strength Index"""
     try:
-        stock = mock_provider.get_current_price(symbol)
+        stock = mock_provider.get_current_price(_normalize_symbol(symbol))
         closes, _, _, _ = _generate_ohlcv(stock["current_price"])
         rsi_vals = calculate_rsi(closes, period)
         rsi_current = rsi_vals[-1] if rsi_vals else None
@@ -158,7 +161,7 @@ async def get_rsi(symbol: str, period: int = 14):
 async def get_macd(symbol: str):
     """MACD"""
     try:
-        stock = mock_provider.get_current_price(symbol)
+        stock = mock_provider.get_current_price(_normalize_symbol(symbol))
         closes, _, _, _ = _generate_ohlcv(stock["current_price"])
         macd = calculate_macd(closes)
         return {
@@ -179,7 +182,7 @@ async def get_macd(symbol: str):
 async def get_bollinger(symbol: str, period: int = 20, std_dev: float = 2.0):
     """Bollinger Bands"""
     try:
-        stock = mock_provider.get_current_price(symbol)
+        stock = mock_provider.get_current_price(_normalize_symbol(symbol))
         closes, _, _, _ = _generate_ohlcv(stock["current_price"])
         bb = calculate_bollinger_bands(closes, period, std_dev)
         return {
@@ -202,7 +205,7 @@ async def get_bollinger(symbol: str, period: int = 20, std_dev: float = 2.0):
 async def get_stochastic(symbol: str, period: int = 14):
     """Stochastic Oscillator"""
     try:
-        stock = mock_provider.get_current_price(symbol)
+        stock = mock_provider.get_current_price(_normalize_symbol(symbol))
         closes, highs, lows, _ = _generate_ohlcv(stock["current_price"])
         stoch = calculate_stochastic(highs, lows, closes, period)
         return {"symbol": symbol, "period": period, "k": stoch["k"][-1] if stoch["k"] else None, "d": stoch["d"][-1] if stoch["d"] else None, "series": stoch}
@@ -217,7 +220,7 @@ async def get_stochastic(symbol: str, period: int = 14):
 async def get_atr(symbol: str, period: int = 14):
     """Average True Range"""
     try:
-        stock = mock_provider.get_current_price(symbol)
+        stock = mock_provider.get_current_price(_normalize_symbol(symbol))
         closes, highs, lows, _ = _generate_ohlcv(stock["current_price"])
         atr_vals = calculate_atr(highs, lows, closes, period)
         return {"symbol": symbol, "period": period, "value": atr_vals[-1] if atr_vals else None, "series": atr_vals}
@@ -232,7 +235,7 @@ async def get_atr(symbol: str, period: int = 14):
 async def get_obv(symbol: str):
     """On-Balance Volume"""
     try:
-        stock = mock_provider.get_current_price(symbol)
+        stock = mock_provider.get_current_price(_normalize_symbol(symbol))
         closes, _, _, volumes = _generate_ohlcv(stock["current_price"])
         obv_vals = calculate_obv(closes, volumes)
         return {"symbol": symbol, "value": obv_vals[-1] if obv_vals else None, "series": obv_vals}

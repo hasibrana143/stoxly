@@ -5,6 +5,10 @@ from comprehensive_indian_stocks import mock_provider
 router = APIRouter(prefix="/api/v1/compare", tags=["Stock Comparator"])
 
 
+def _normalize_symbol(s: str) -> str:
+    return s.replace('.NS', '').replace('.BO', '').replace('.BSE', '')
+
+
 def _fetch_stocks(symbols_str: str):
     symbols = [s.strip().upper() for s in symbols_str.split(",") if s.strip()]
     if not symbols:
@@ -13,7 +17,7 @@ def _fetch_stocks(symbols_str: str):
     errors = []
     for sym in symbols:
         try:
-            results.append(mock_provider.get_current_price(sym))
+            results.append(mock_provider.get_current_price(_normalize_symbol(sym)))
         except (ValueError, Exception):
             errors.append(sym)
     if not results:
@@ -85,7 +89,7 @@ async def get_comparison_table(symbols: str = Query(...)):
 async def get_stock_radar(symbol: str):
     symbol = symbol.upper()
     try:
-        stock = mock_provider.get_current_price(symbol)
+        stock = mock_provider.get_current_price(_normalize_symbol(symbol))
     except ValueError:
         raise HTTPException(status_code=404, detail=f"Stock not found: {symbol}")
 

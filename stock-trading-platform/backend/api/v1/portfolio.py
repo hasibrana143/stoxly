@@ -17,6 +17,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/portfolio", tags=["Portfolio"])
 
 
+def _normalize_symbol(s: str) -> str:
+    return s.replace('.NS', '').replace('.BO', '').replace('.BSE', '')
+
+
 def _get_user(credentials: HTTPAuthorizationCredentials, db: Session):
     user_email = verify_token(credentials.credentials)
     user = UserRepository(db).get_by_email(user_email)
@@ -60,7 +64,7 @@ async def get_all_holdings(credentials: HTTPAuthorizationCredentials = Depends(H
         for portfolio in portfolios:
             for holding in portfolio.holdings:
                 try:
-                    price_data = mock_provider.get_current_price(holding.symbol)
+                    price_data = mock_provider.get_current_price(_normalize_symbol(holding.symbol))
                     current_price = price_data["current_price"]
                     name = price_data.get("name", holding.symbol)
                 except:
@@ -89,7 +93,7 @@ async def get_portfolio_detail(portfolio_id: int, credentials: HTTPAuthorization
         total_investment = 0
         for holding in portfolio.holdings:
             try:
-                price_data = mock_provider.get_current_price(holding.symbol)
+                price_data = mock_provider.get_current_price(_normalize_symbol(holding.symbol))
                 current_price = price_data["current_price"]
             except:
                 current_price = holding.average_price
@@ -172,35 +176,5 @@ async def update_portfolio_item(portfolio_id: int, item_id: int, item_update: Ho
         raise HTTPException(status_code=500, detail="Failed to update item")
 
 
-@router.post("/optimize")
-async def optimize_portfolio(request: OptimizationRequest, credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
-    try:
-        verify_token(credentials.credentials)
-        symbols = request.symbols
-        np.random.seed(42)
-        expected_returns = np.random.uniform(0.08, 0.15, len(symbols))
-        correlation_matrix = np.random.uniform(0.1, 0.8, (len(symbols), len(symbols)))
-        np.fill_diagonal(correlation_matrix, 1.0)
-        volatilities = np.random.uniform(0.15, 0.35, len(symbols))
-        cov_matrix = np.outer(volatilities, volatilities) * correlation_matrix
-
-        def portfolio_stats(weights):
-            portfolio_return = np.sum(expected_returns * weights)
-            portfolio_risk = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
-            return portfolio_return, portfolio_risk, portfolio_return / portfolio_risk if portfolio_risk > 0 else 0
-
-        constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
-        bounds = tuple((0, 1) for _ in range(len(symbols)))
-        initial_guess = np.array([1 / len(symbols)] * len(symbols))
-        result = minimize(lambda w: -portfolio_stats(w)[2], initial_guess, method='SLSQP', bounds=bounds, constraints=constraints)
-
-        if result.success:
-            opt_return, opt_risk, opt_sharpe = portfolio_stats(result.x)
-            allocation = [{"symbol": s, "weight": round(w, 4), "percentage": round(w * 100, 2)} for s, w in zip(symbols, result.x)]
-            return {"symbols": symbols, "allocation": allocation, "expected_return": round(opt_return, 4), "risk": round(opt_risk, 4), "sharpe_ratio": round(opt_sharpe, 4), "optimization_successful": True}
-        raise HTTPException(status_code=500, detail="Optimization failed")
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Portfolio optimization error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Portfolio optimization failed")
+# Optimization endpoint moved to portfolio_optimizer_routes.py (POST /api/v1/portfolio/optimize)
+# Uses service layer with Markowitz, Black-Litterman, Efficient Frontier, VaR/CVaR

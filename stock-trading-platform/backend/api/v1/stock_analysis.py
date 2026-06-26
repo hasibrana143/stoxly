@@ -15,6 +15,10 @@ router = APIRouter(prefix="/api/v1/analysis", tags=["Stock Analysis"])
 security = HTTPBearer()
 
 
+def _normalize_symbol(s: str) -> str:
+    return s.replace('.NS', '').replace('.BO', '').replace('.BSE', '')
+
+
 @router.get("/stock/{symbol}")
 async def analyze_stock_endpoint(
     symbol: str,
@@ -24,7 +28,7 @@ async def analyze_stock_endpoint(
     """AI-powered stock analysis with ratings, target price, support/resistance"""
     try:
         token_email = verify_token(credentials.credentials)
-        stock = mock_provider.get_current_price(symbol)
+        stock = mock_provider.get_current_price(_normalize_symbol(symbol))
         fundamentals = {
             "pe_ratio": stock.get("pe_ratio"),
             "roe": stock.get("roe"),
@@ -76,7 +80,7 @@ async def compare_stocks_endpoint(
         stocks = []
         for sym in symbols:
             try:
-                stock = mock_provider.get_current_price(sym)
+                stock = mock_provider.get_current_price(_normalize_symbol(sym))
                 stocks.append(stock)
             except ValueError:
                 raise HTTPException(status_code=404, detail=f"Stock not found: {sym}")
@@ -149,7 +153,7 @@ async def get_market_brief_endpoint(
 async def get_stock_news(symbol: str, limit: int = 10):
     """Get recent news for a stock (template-based for now)"""
     try:
-        stock = mock_provider.get_current_price(symbol)
+        stock = mock_provider.get_current_price(_normalize_symbol(symbol))
         from datetime import datetime, timedelta
         sample_headlines = [
             {"headline": f"{stock['name']} reports strong quarterly earnings, beats estimates", "source": "Economic Times", "date": (datetime.now() - timedelta(days=1)).isoformat(), "url": f"https://economictimes.indiatimes.com/{symbol.lower()}"},

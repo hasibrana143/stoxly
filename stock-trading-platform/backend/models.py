@@ -89,12 +89,16 @@ class ChatHistory(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    session_id = Column(Integer, ForeignKey("chat_sessions.id"), nullable=True)
     message = Column(Text, nullable=False)
-    response = Column(Text, nullable=False)
+    response = Column(Text, nullable=True)
+    role = Column(String(20), default="user")
+    context = Column(String(50), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships
     user = relationship("User")
+    session = relationship("ChatSession", backref="messages")
 
 class WatchList(Base):
     __tablename__ = "watchlists"
@@ -496,6 +500,109 @@ class EmailVerificationTokens(Base):
     user = relationship("User")
 
 
+class PriceAlert(Base):
+    __tablename__ = "price_alerts"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    symbol = Column(String(20), nullable=False)
+    target_price = Column(Float, nullable=False)
+    condition = Column(String(10), nullable=False, default="above")
+    active = Column(Boolean, default=True)
+    note = Column(Text, nullable=True)
+    triggered = Column(Boolean, default=False)
+    triggered_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    user = relationship("User", backref="price_alerts")
+
+
+class PaperAccount(Base):
+    __tablename__ = "paper_accounts"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    balance = Column(Float, default=1000000.0)
+    initial_balance = Column(Float, default=1000000.0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    user = relationship("User", backref="paper_account")
+    holdings = relationship("PaperHolding", back_populates="account", cascade="all, delete-orphan")
+    transactions = relationship("PaperTransaction", back_populates="account", cascade="all, delete-orphan")
+
+
+class PaperHolding(Base):
+    __tablename__ = "paper_holdings"
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("paper_accounts.id"), nullable=False)
+    symbol = Column(String(20), nullable=False)
+    quantity = Column(Float, nullable=False)
+    avg_price = Column(Float, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    account = relationship("PaperAccount", back_populates="holdings")
+
+
+class PaperTransaction(Base):
+    __tablename__ = "paper_transactions"
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("paper_accounts.id"), nullable=False)
+    symbol = Column(String(20), nullable=False)
+    quantity = Column(Float, nullable=False)
+    price = Column(Float, nullable=False)
+    total = Column(Float, nullable=False)
+    order_type = Column(String(20), default="market")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    account = relationship("PaperAccount", back_populates="transactions")
+
+
+class ChatSession(Base):
+    __tablename__ = "chat_sessions"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    title = Column(String(200), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    user = relationship("User", backref="chat_sessions")
+
+
 # Create all tables function
 def create_tables():
     Base.metadata.create_all(bind=engine)
+    _migrate_schema()
+
+
+def _migrate_schema():
+    import logging
+    from sqlalchemy import inspect, text
+    logger = logging.getLogger(__name__)
+    try:
+        inspector = inspect(engine)
+        columns = {c["name"] for c in inspector.get_columns("users")}
+        additions = []
+        if "is_email_verified" not in columns:
+            additions.append("ADD COLUMN is_email_verified BOOLEAN DEFAULT 0")
+        if "email_verification_token" not in columns:
+            additions.append("ADD COLUMN email_verification_token VARCHAR(255)")
+        if "totp_secret" not in columns:
+            additions.append("ADD COLUMN totp_secret VARCHAR(64)")
+        if "is_2fa_enabled" not in columns:
+            additions.append("ADD COLUMN is_2fa_enabled BOOLEAN DEFAULT 0")
+        if "last_password_change" not in columns:
+            additions.append("ADD COLUMN last_password_change DATETIME DEFAULT CURRENT_TIMESTAMP")
+        for add in additions:
+            with engine.connect() as conn:
+                conn.execute(text(f"ALTER TABLE users {add}"))
+                conn.commit()
+            logger.info(f"Schema migration: added {add}")
+        chat_columns = {c["name"] for c in inspector.get_columns("chat_history")}
+        chat_additions = []
+        if "session_id" not in chat_columns:
+            chat_additions.append("ADD COLUMN session_id INTEGER REFERENCES chat_sessions(id)")
+        if "role" not in chat_columns:
+            chat_additions.append("ADD COLUMN role VARCHAR(20) DEFAULT 'user'")
+        if "context" not in chat_columns:
+            chat_additions.append("ADD COLUMN context VARCHAR(50)")
+        for add in chat_additions:
+            with engine.connect() as conn:
+                conn.execute(text(f"ALTER TABLE chat_history {add}"))
+                conn.commit()
+            logger.info(f"Schema migration: added {add}")
+    except Exception as e:
+        logger.warning(f"Schema migration skipped: {e}")

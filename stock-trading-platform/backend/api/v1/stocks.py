@@ -10,6 +10,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/stocks", tags=["Stocks"])
 
 
+def _normalize_symbol(s: str) -> str:
+    return s.replace('.NS', '').replace('.BO', '').replace('.BSE', '')
+
+
 @router.get("/search/{query}")
 async def search_stocks(query: str):
     try:
@@ -23,7 +27,7 @@ async def search_stocks(query: str):
 @router.get("/price/{symbol}")
 async def get_stock_price(symbol: str):
     try:
-        p = mock_provider.get_current_price(symbol)
+        p = mock_provider.get_current_price(_normalize_symbol(symbol))
         return {"symbol": p["symbol"], "current_price": p["current_price"], "previous_close": p["previous_close"], "change": p["change"], "change_percent": p["change_percent"], "volume": p["volume"], "market_cap": p["market_cap"], "company_name": p["name"]}
     except ValueError:
         raise HTTPException(status_code=404, detail="Stock not found")
@@ -58,7 +62,7 @@ async def get_market_movers(type: str = "gainers", limit: int = 10):
 async def get_stock_details_alias(symbol: str):
     try:
         try:
-            p = mock_provider.get_current_price(symbol)
+            p = mock_provider.get_current_price(_normalize_symbol(symbol))
             return {"symbol": p["symbol"], "current_price": p["current_price"], "previous_close": p["previous_close"], "change": p["change"], "change_percent": p["change_percent"], "volume": p["volume"], "market_cap": p.get("market_cap", 0), "company_name": p["name"], "pe_ratio": p.get("pe_ratio", 0), "roe": p.get("roe", 0), "roce": p.get("roce", 0), "book_value": p.get("book_value", 0), "dividend_yield": p.get("dividend_yield", 0), "price_change_1w": p.get("price_change_1w", 0), "price_change_1m": p.get("price_change_1m", 0), "price_change_3m": p.get("price_change_3m", 0), "price_change_6m": p.get("price_change_6m", 0), "price_change_1y": p.get("price_change_1y", 0), "high_52w": p.get("high_52w", 0), "low_52w": p.get("low_52w", 0)}
         except ValueError:
             stock_details = screener_service.get_stock_details(symbol)
