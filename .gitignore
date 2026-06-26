@@ -13,4 +13,5 @@ stock-trading-platform/backend/.env
 .cache/
 __pycache__/
 *.pyc
+*.db
 .DS_Store
