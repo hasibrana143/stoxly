@@ -7,15 +7,17 @@ from datetime import datetime
 from typing import List
 
 import sentry_sdk
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, Request
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.openapi.utils import get_openapi
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from core.config import settings
 from core.database import get_db, engine
-from core.security import get_password_hash
+from core.security import get_password_hash, verify_token
 from models import User, create_tables
 from middleware.error_handler import global_exception_handler
 from middleware.rate_limiter import RateLimitMiddleware
@@ -99,9 +101,21 @@ app = FastAPI(title=settings.APP_NAME, description="Stoxly.ai - Indian stock tra
 
 app.add_exception_handler(Exception, global_exception_handler)
 
-app.add_middleware(CORSMiddleware, allow_origins=settings.CORS_ORIGINS, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=settings.CORS_ORIGINS, allow_credentials=True, allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"])
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
+
+
+class RequestBodyLimitMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.method in ("POST", "PUT", "PATCH"):
+            cl = request.headers.get("content-length")
+            if cl and int(cl) > 1_048_576:
+                raise HTTPException(status_code=413, detail="Request body too large (max 1MB)")
+        return await call_next(request)
+
+
+app.add_middleware(RequestBodyLimitMiddleware)
 
 
 @app.middleware("http")
@@ -153,7 +167,16 @@ app.include_router(profile_endpoints.router)
 
 
 @app.websocket("/ws/stocks")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(websocket: WebSocket, token: str = ""):
+    token = websocket.query_params.get("token", token)
+    if not token:
+        await websocket.close(code=4001, reason="Missing auth token")
+        return
+    try:
+        verify_token(token)
+    except Exception:
+        await websocket.close(code=4001, reason="Invalid auth token")
+        return
     await manager.connect(websocket)
     try:
         while True:
