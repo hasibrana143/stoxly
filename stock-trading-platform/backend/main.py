@@ -22,6 +22,7 @@ from models import User, create_tables
 from middleware.error_handler import global_exception_handler
 from middleware.rate_limiter import RateLimitMiddleware
 from middleware.security_headers import SecurityHeadersMiddleware
+from core.redis_client import close_redis
 from comprehensive_indian_stocks import mock_provider
 
 logging.basicConfig(level=logging.INFO)
@@ -87,6 +88,7 @@ async def lifespan(app: FastAPI):
 
     yield
     broadcast_task.cancel()
+    await close_redis()
     logger.info("Application shutting down")
 
 
@@ -187,4 +189,8 @@ async def websocket_endpoint(websocket: WebSocket, token: str = ""):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001, reload=True)
+    ssl_kwargs = {}
+    if settings.SSL_CERT_PATH and settings.SSL_KEY_PATH:
+        ssl_kwargs["ssl_certfile"] = settings.SSL_CERT_PATH
+        ssl_kwargs["ssl_keyfile"] = settings.SSL_KEY_PATH
+    uvicorn.run(app, host="0.0.0.0", port=8001, reload=settings.DEBUG, **ssl_kwargs)

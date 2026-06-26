@@ -12,6 +12,11 @@ class User(Base):
     email = Column(String(100), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
+    is_email_verified = Column(Boolean, default=False)
+    email_verification_token = Column(String(255), nullable=True)
+    totp_secret = Column(String(64), nullable=True)
+    is_2fa_enabled = Column(Boolean, default=False)
+    last_password_change = Column(DateTime(timezone=True), server_default=func.now())
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
@@ -464,6 +469,31 @@ class UserActivity(Base):
     
     # Relationship
     user = relationship("User", backref="activity")
+
+
+class PasswordHistory(Base):
+    __tablename__ = "password_history"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationship
+    user = relationship("User", backref="password_history")
+
+
+class EmailVerificationTokens(Base):
+    __tablename__ = "email_verification_tokens"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    token = Column(String(255), unique=True, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationship
+    user = relationship("User")
 
 
 # Create all tables function

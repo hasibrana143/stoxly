@@ -8,10 +8,12 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+    captcha_token: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+    captcha_token: Optional[str] = None
 
 class PortfolioBase(BaseModel):
     name: str
