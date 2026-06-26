@@ -6,6 +6,7 @@ import { store } from './store/store';
 import { useAppSelector, useAppDispatch } from './hooks/redux';
 import { loadUserFromStorage } from './store/authSlice';
 import Navbar from './components/Layout/Navbar';
+import ErrorBoundary from './shared/ui/ErrorBoundary';
 import { Home } from './features/home';
 import { Dashboard } from './features/dashboard';
 import { Login, Register } from './features/auth';
@@ -40,6 +41,7 @@ const AppContent: React.FC = () => {
       <div className="min-h-screen bg-gray-50">
         <Navbar />
         <main className={'pt-16'}>
+          <ErrorBoundary>
           <Routes>
             <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
             <Route path="/register" element={!isAuthenticated ? <Register /> : <Navigate to="/dashboard" />} />
@@ -59,6 +61,7 @@ const AppContent: React.FC = () => {
             <Route path="/screener" element={<ProtectedRoute><Screener /></ProtectedRoute>} />
             <Route path="/" element={<Home />} />
           </Routes>
+          </ErrorBoundary>
         </main>
         <Toaster position="top-right" />
       </div>

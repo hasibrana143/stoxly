@@ -1,16 +1,20 @@
 import asyncio
 import json
 import logging
+import uuid
 from contextlib import asynccontextmanager
+from datetime import datetime
 from typing import List
 
 import sentry_sdk
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from core.config import settings
-from core.database import get_db
+from core.database import get_db, engine
 from core.security import get_password_hash
 from models import User, create_tables
 from middleware.error_handler import global_exception_handler
@@ -90,12 +94,45 @@ if settings.SENTRY_DSN:
         environment="production" if not settings.DEBUG else "development",
     )
 
-app = FastAPI(title=settings.APP_NAME, description="Comprehensive stock trading platform with AI chat and portfolio optimization", version=settings.VERSION, lifespan=lifespan)
+app = FastAPI(title=settings.APP_NAME, description="Stoxly.ai - Indian stock trading platform with AI-powered chat, portfolio optimization, and screener", version=settings.VERSION, lifespan=lifespan, contact={"name": "Stoxly Team", "url": "https://stoxly.ai"}, license_info={"name": "Proprietary"})
 
 app.add_exception_handler(Exception, global_exception_handler)
 
 app.add_middleware(CORSMiddleware, allow_origins=settings.CORS_ORIGINS, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 app.add_middleware(RateLimitMiddleware, max_requests=100, window_seconds=60)
+
+
+@app.middleware("http")
+async def add_request_id(request: Request, call_next):
+    request_id = str(uuid.uuid4())[:8]
+    request.state.request_id = request_id
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    return response
+
+
+@app.get("/api/v1/health")
+async def health_check():
+    db_ok = False
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+            db_ok = True
+    except Exception:
+        pass
+    return {"status": "healthy" if db_ok else "degraded", "database": "connected" if db_ok else "disconnected", "timestamp": datetime.utcnow().isoformat(), "version": settings.VERSION, "environment": "production" if not settings.DEBUG else "development"}
+
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(title=settings.APP_NAME, version=settings.VERSION, description="Stoxly.ai API - Indian stock trading platform", routes=app.routes)
+    openapi_schema["info"]["x-logo"] = {"url": "https://stoxly.ai/logo.png"}
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
 
 from api.v1 import auth, stocks, portfolio, watchlist, screener, indian_stocks, chat, profile, recommendations
 

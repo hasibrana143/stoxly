@@ -253,9 +253,60 @@ For issues and questions:
 2. Review the API documentation at `/docs`
 3. Contact the development team
 
-## 🔄 Future Enhancements
+## 🏗️ Architecture
 
-- [ ] Real-time WebSocket price updates
+```
+stock-trading-platform/
+├── backend/                          # FastAPI Python backend
+│   ├── api/v1/                       # Route handlers (9 modules)
+│   │   ├── auth.py          Auth endpoints
+│   │   ├── stocks.py        Stock data endpoints
+│   │   ├── portfolio.py     Portfolio CRUD + optimization
+│   │   ├── watchlist.py     Watchlist management
+│   │   ├── screener.py      Stock screener + filters
+│   │   ├── chat.py          AI chat (public + personalized)
+│   │   ├── profile.py       Investment profile
+│   │   ├── indian_stocks.py Indian stock explorer
+│   │   └── recommendations.py Portfolio recommendations
+│   ├── core/                         Config, DB, security
+│   ├── services/                     Business logic layer
+│   ├── repositories/                 Data access layer (6 repos)
+│   ├── middleware/                   Error handler, rate limiter
+│   ├── models.py, schemas.py         DB models + Pydantic schemas
+│   ├── alembic/                      DB migrations
+│   └── tests/                        11 tests across 4 files
+├── frontend/                         React + TypeScript
+│   ├── src/
+│   │   ├── features/                 Feature-based modules (9)
+│   │   ├── shared/ui/                Reusable component library
+│   │   ├── types/                    Centralized TypeScript types
+│   │   └── store/                    Redux store + slices
+│   └── Dockerfile
+├── docker-compose.yml
+└── .github/workflows/ci.yml         CI/CD pipeline
+```
+
+### Architecture Patterns
+- **Clean Architecture**: Route → Service → Repository (no DB in routes)
+- **API Versioning**: All endpoints under `/api/v1/`
+- **Rate Limiting**: 100 req/min per IP
+- **Request Tracing**: X-Request-ID header on all responses
+- **Error Tracking**: Sentry integration
+- **DB Migrations**: Alembic with autogenerate
+- **CI/CD**: GitHub Actions (lint + test + build)
+
+### Tech Stack
+| Layer | Technology |
+|-------|------------|
+| Backend | FastAPI, SQLAlchemy, Alembic |
+| Frontend | React 18, Redux Toolkit, Tailwind CSS |
+| AI | Google Gemini API |
+| Real-time | WebSocket |
+| Monitoring | Sentry |
+| Infrastructure | Docker, GitHub Actions |
+
+## 🔄 Future Enhancements (cont.)
+
 - [ ] Advanced technical indicators
 - [ ] Options trading support
 - [ ] Social trading features
