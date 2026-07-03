@@ -154,7 +154,7 @@ const BasicInfoTab = () => {
 // --- Notification Settings Tab ---
 const NotificationSettingsTab = () => {
     const { data: settings, isLoading } = useGetNotificationSettingsQuery();
-    const [updateSettings, { isLoading: isUpdating }] = useUpdateNotificationSettingsMutation();
+    const [updateSettings] = useUpdateNotificationSettingsMutation();
     const [formData, setFormData] = useState({
         email_alerts: true,
         push_notifications: true,
@@ -224,7 +224,7 @@ const NotificationSettingsTab = () => {
 // --- Display Preferences Tab ---
 const DisplayPreferencesTab = () => {
     const { data: prefs, isLoading } = useGetDisplayPreferencesQuery();
-    const [updatePrefs, { isLoading: isUpdating }] = useUpdateDisplayPreferencesMutation();
+    const [updatePrefs] = useUpdateDisplayPreferencesMutation();
     const [formData, setFormData] = useState({
         theme: 'light',
         currency: 'INR',

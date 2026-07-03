@@ -1,13 +1,3 @@
-import pytest
-from fastapi.testclient import TestClient
-from main import app
-
-
-@pytest.fixture
-def client():
-    with TestClient(app) as c:
-        yield c
-
 
 def test_create_portfolio_without_auth(client):
     response = client.post("/api/v1/portfolio/create", json={"name": "Test", "description": "Test portfolio"})

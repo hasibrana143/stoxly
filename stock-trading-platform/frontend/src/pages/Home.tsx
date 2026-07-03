@@ -57,7 +57,8 @@ const Home: React.FC = () => {
     const connectWebSocket = () => {
       if (!active) return;
 
-      ws = new WebSocket('ws://localhost:8000/ws/stocks');
+      const wsUrl = process.env.REACT_APP_WS_URL || 'ws://localhost:8000/ws/stocks';
+      ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {

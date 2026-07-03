@@ -117,7 +117,7 @@ async def get_sector_heatmap():
 
 @router.get("/top-movers")
 async def get_top_movers(
-    type: str = Query("gainers", regex="^(gainers|losers|active)$"),
+    type: str = Query("gainers", pattern="^(gainers|losers|active)$"),
     sector: Optional[str] = None,
     limit: int = 10,
 ):

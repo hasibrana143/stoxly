@@ -40,7 +40,7 @@ const PortfolioOptimizer: React.FC = () => {
             placeholder="Add stock symbol"
             value={newSymbol}
             onChange={(e) => setNewSymbol(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && addSymbol()}
+            onKeyDown={(e) => e.key === 'Enter' && addSymbol()}
           />
           <button onClick={addSymbol} className="btn-primary">Add</button>
         </div>

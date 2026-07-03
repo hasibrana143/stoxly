@@ -16,6 +16,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.redis_limiter: RedisRateLimiter | None = None
 
     async def dispatch(self, request: Request, call_next):
+        if request.scope["type"] == "websocket":
+            return await call_next(request)
         if request.url.path.startswith("/api/"):
             client_ip = request.client.host if request.client else "unknown"
             is_auth = "/auth/" in request.url.path

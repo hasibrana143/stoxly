@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { Toaster } from 'react-hot-toast';
@@ -7,16 +7,25 @@ import { useAppSelector, useAppDispatch } from './hooks/redux';
 import { loadUserFromStorage } from './store/authSlice';
 import Navbar from './components/Layout/Navbar';
 import ErrorBoundary from './shared/ui/ErrorBoundary';
-import { Home } from './features/home';
-import { Dashboard } from './features/dashboard';
-import { Login, Register } from './features/auth';
-import { StockSearch, StockDetails, IndianStockExplorer } from './features/stocks';
-import { Portfolio, PortfolioOptimizer, ManagePortfolio, PortfolioHoldings } from './features/portfolio';
-import { ChatBot } from './features/chat';
-import { Screener } from './features/screener';
-import { Profile, InvestmentProfileOnboarding } from './features/profile';
-import { Watchlist } from './features/watchlist';
+import LoadingSpinner from './shared/ui/LoadingSpinner';
 import './App.css';
+
+const Home = lazy(() => import('./features/home').then(m => ({ default: m.Home })));
+const Dashboard = lazy(() => import('./features/dashboard').then(m => ({ default: m.Dashboard })));
+const Login = lazy(() => import('./features/auth').then(m => ({ default: m.Login })));
+const Register = lazy(() => import('./features/auth').then(m => ({ default: m.Register })));
+const StockSearch = lazy(() => import('./features/stocks').then(m => ({ default: m.StockSearch })));
+const StockDetails = lazy(() => import('./features/stocks').then(m => ({ default: m.StockDetails })));
+const IndianStockExplorer = lazy(() => import('./features/stocks').then(m => ({ default: m.IndianStockExplorer })));
+const Portfolio = lazy(() => import('./features/portfolio').then(m => ({ default: m.Portfolio })));
+const PortfolioOptimizer = lazy(() => import('./features/portfolio').then(m => ({ default: m.PortfolioOptimizer })));
+const ManagePortfolio = lazy(() => import('./features/portfolio').then(m => ({ default: m.ManagePortfolio })));
+const PortfolioHoldings = lazy(() => import('./features/portfolio').then(m => ({ default: m.PortfolioHoldings })));
+const ChatBot = lazy(() => import('./features/chat').then(m => ({ default: m.ChatBot })));
+const Screener = lazy(() => import('./features/screener').then(m => ({ default: m.Screener })));
+const Profile = lazy(() => import('./features/profile').then(m => ({ default: m.Profile })));
+const InvestmentProfileOnboarding = lazy(() => import('./features/profile').then(m => ({ default: m.InvestmentProfileOnboarding })));
+const Watchlist = lazy(() => import('./features/watchlist').then(m => ({ default: m.Watchlist })));
 
 const LegacyStockRedirect: React.FC = () => {
   const { symbol } = useParams();
@@ -34,6 +43,11 @@ const AppContent: React.FC = () => {
 
   React.useEffect(() => {
     dispatch(loadUserFromStorage());
+    
+    // Fetch CSRF token on startup to initialize the csrf_token cookie
+    const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
+    fetch(`${apiBaseUrl}/auth/csrf-token`)
+      .catch((err) => console.error('Failed to initialize CSRF token:', err));
   }, [dispatch]);
 
   return (
@@ -42,6 +56,7 @@ const AppContent: React.FC = () => {
         <Navbar />
         <main className={'pt-16'}>
           <ErrorBoundary>
+          <Suspense fallback={<LoadingSpinner fullScreen />}>
           <Routes>
             <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
             <Route path="/register" element={!isAuthenticated ? <Register /> : <Navigate to="/dashboard" />} />
@@ -61,6 +76,7 @@ const AppContent: React.FC = () => {
             <Route path="/screener" element={<ProtectedRoute><Screener /></ProtectedRoute>} />
             <Route path="/" element={<Home />} />
           </Routes>
+          </Suspense>
           </ErrorBoundary>
         </main>
         <Toaster position="top-right" />

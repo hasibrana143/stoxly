@@ -140,7 +140,7 @@ async def export_watchlist_csv_endpoint(credentials: HTTPAuthorizationCredential
 
 
 @router.get("/portfolio/{portfolio_id}/report")
-async def export_portfolio_report(portfolio_id: int, format: str = Query("json", regex="^(json|csv)$"), credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+async def export_portfolio_report(portfolio_id: int, format: str = Query("json", pattern="^(json|csv)$"), credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
     try:
         user = _get_user(credentials, db)
         portfolio = PortfolioRepository(db).get_by_id_and_user(portfolio_id, user.id)

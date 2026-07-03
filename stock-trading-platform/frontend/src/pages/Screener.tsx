@@ -88,9 +88,11 @@ const Screener: React.FC = () => {
     const run = async () => {
       setLoading(true);
       try {
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
         const response = await fetch(`${API_BASE}/screener/screen`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify(filters)
         });
         if (response.ok) {
@@ -107,7 +109,7 @@ const Screener: React.FC = () => {
       }
     };
     run();
-  }, [filters]);
+  }, [filters, token]);
 
   useEffect(() => {
     const loadSaved = async () => {

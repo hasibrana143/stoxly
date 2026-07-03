@@ -20,12 +20,10 @@ import {
   useGetScreenerPeersQuery,
   useGetIndianStockPriceQuery,
   useGetStockHistoryQuery,
-  useGetStockDetailsQuery,
   useGetWatchlistQuery,
   useAddToWatchlistMutation,
   useRemoveFromWatchlistMutation
 } from '../services/api';
-import { useAppDispatch, useAppSelector } from '../hooks/redux';
 import {
   ChartBarIcon,
   ArrowTrendingUpIcon,
@@ -46,8 +44,8 @@ const StockDetails: React.FC = () => {
 
   // Watchlist hooks
   const { data: watchlistData } = useGetWatchlistQuery();
-  const [addToWatchlist, { isLoading: isAdding }] = useAddToWatchlistMutation();
-  const [removeFromWatchlist, { isLoading: isRemoving }] = useRemoveFromWatchlistMutation();
+  const [addToWatchlist] = useAddToWatchlistMutation();
+  const [removeFromWatchlist] = useRemoveFromWatchlistMutation();
 
   // Queries
   // const { data: stockDetails, isLoading: isLoadingDetails, error: detailsError } = useGetStockDetailsQuery(symbol || '', { skip: !symbol });
@@ -589,7 +587,7 @@ const StockDetails: React.FC = () => {
                     <tr>
                       <td className="px-4 py-3 font-medium text-gray-900">Share Capital</td>
                       {balanceData.balance_sheet.map((y: any) => (
-                        <td key={y.year} className="px-4 py-3 text-right">{y.shareholders_equity}</td> // Simplified
+                        <td key={y.year} className="px-4 py-3 text-right">{y.shareholders_equity}</td>
                       ))}
                     </tr>
                     <tr>

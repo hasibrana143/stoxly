@@ -12,7 +12,7 @@ async def get_csrf_token(response: Response):
     response.set_cookie(
         key="csrf_token",
         value=token,
-        httponly=True,
+        httponly=False,
         samesite="strict",
         path="/",
     )

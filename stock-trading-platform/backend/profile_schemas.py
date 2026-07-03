@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import datetime
 
@@ -24,9 +24,7 @@ class UserProfile(UserProfileBase):
     profile_picture_url: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class NotificationSettingsBase(BaseModel):
     price_alerts_enabled: bool = True
@@ -51,9 +49,7 @@ class NotificationSettings(NotificationSettingsBase):
     user_id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DisplayPreferencesBase(BaseModel):
@@ -76,9 +72,7 @@ class DisplayPreferences(DisplayPreferencesBase):
     user_id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserSessionBase(BaseModel):
@@ -93,9 +87,7 @@ class UserSession(UserSessionBase):
     session_token: str
     last_active: datetime
     created_at: datetime
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LoginHistoryBase(BaseModel):
@@ -109,9 +101,7 @@ class LoginHistory(LoginHistoryBase):
     id: int
     user_id: int
     login_time: datetime
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SubscriptionBase(BaseModel):
@@ -131,9 +121,7 @@ class Subscription(SubscriptionBase):
     expiry_date: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PaymentHistoryBase(BaseModel):
@@ -147,9 +135,7 @@ class PaymentHistory(PaymentHistoryBase):
     user_id: int
     payment_date: datetime
     invoice_url: Optional[str] = None
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserActivityBase(BaseModel):
@@ -163,9 +149,7 @@ class UserActivity(UserActivityBase):
     last_login: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Password Change

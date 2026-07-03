@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict
 import threading
 from jose import jwt
@@ -37,14 +37,14 @@ def is_token_blacklisted_by_jti(jti: str) -> bool:
         entry = _blacklist.get(jti)
         if entry is None:
             return False
-        if datetime.utcnow().timestamp() >= entry:
+        if datetime.now(timezone.utc).timestamp() >= entry:
             del _blacklist[jti]
             return False
         return True
 
 
 def cleanup_blacklist() -> None:
-    now = datetime.utcnow().timestamp()
+    now = datetime.now(timezone.utc).timestamp()
     with _lock:
         expired = [jti for jti, exp in _blacklist.items() if now >= exp]
         for jti in expired:

@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from typing import List, Optional
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timezone
 
 from core.security import verify_token
 from database import get_db
@@ -122,7 +122,7 @@ async def update_alert(
         ).first()
         if not alert:
             raise HTTPException(status_code=404, detail="Alert not found")
-        update_data = update.dict(exclude_none=True)
+        update_data = update.model_dump(exclude_none=True)
         for key, value in update_data.items():
             setattr(alert, key, value)
         db.commit()
@@ -169,7 +169,7 @@ async def check_alerts(db: Session = Depends(get_db)):
     from comprehensive_indian_stocks import mock_provider
 
     triggered = []
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     alerts = db.query(PriceAlert).filter(
         PriceAlert.active == True,
         PriceAlert.triggered == False,

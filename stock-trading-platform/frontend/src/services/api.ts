@@ -1,12 +1,23 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { RootState } from '../store/store';
 
+const getCookie = (name: string): string | null => {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+  return null;
+};
+
 const baseQuery = fetchBaseQuery({
   baseUrl: process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1',
   prepareHeaders: (headers, { getState }) => {
     const token = (getState() as RootState).auth.token;
     if (token) {
       headers.set('authorization', `Bearer ${token}`);
+    }
+    const csrfToken = getCookie('csrf_token');
+    if (csrfToken) {
+      headers.set('X-CSRF-Token', csrfToken);
     }
     return headers;
   },

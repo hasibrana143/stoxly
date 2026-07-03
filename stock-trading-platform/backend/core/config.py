@@ -19,7 +19,7 @@ class Settings:
     PASSWORD_EXPIRY_DAYS: int = config('PASSWORD_EXPIRY_DAYS', default=90, cast=int)
     PASSWORD_HISTORY_COUNT: int = config('PASSWORD_HISTORY_COUNT', default=5, cast=int)
 
-    CORS_ORIGINS: List[str] = config('CORS_ORIGINS', default='http://localhost:3000').split(',')
+    CORS_ORIGINS: List[str] = config('CORS_ORIGINS', default='http://localhost:3000,http://localhost:3003').split(',')
 
     GEMINI_API_KEY: Optional[str] = config('GEMINI_API_KEY', default=None)
     ALPHA_VANTAGE_API_KEY: Optional[str] = config('ALPHA_VANTAGE_API_KEY', default=None)

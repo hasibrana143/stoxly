@@ -31,7 +31,7 @@ const ManagePortfolio: React.FC = () => {
     );
 
     const [addPortfolioItem, { isLoading: isAdding }] = useAddPortfolioItemMutation();
-    const [deletePortfolioItem, { isLoading: isDeleting }] = useDeletePortfolioItemMutation();
+    const [deletePortfolioItem] = useDeletePortfolioItemMutation();
     const [updatePortfolioItem, { isLoading: isUpdating }] = useUpdatePortfolioItemMutation();
 
     const handleAddStock = async (e: React.FormEvent) => {

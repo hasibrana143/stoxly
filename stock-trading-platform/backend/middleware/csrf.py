@@ -17,6 +17,8 @@ STATE_CHANGING_METHODS = frozenset({"POST", "PUT", "DELETE", "PATCH"})
 
 class CSRFMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        if request.scope["type"] == "websocket":
+            return await call_next(request)
         path = request.url.path
         method = request.method
 

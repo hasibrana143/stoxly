@@ -18,3 +18,5 @@ sentry-sdk
 redis>=5.0
 pyotp>=2.8
 fastapi-mail>=1.4
+prometheus-client
+qrcode[pil]

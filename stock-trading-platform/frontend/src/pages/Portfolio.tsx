@@ -2,12 +2,10 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   useListPortfoliosQuery,
-  useCreatePortfolioMutation,
   useGetPortfolioDetailsQuery,
   useAddPortfolioItemMutation,
   useDeletePortfolioItemMutation,
   useSearchIndianStocksQuery,
-  useGetAllIndianStocksQuery,
   useGetMarketMoversQuery,
   useGetWatchlistQuery
 } from '../services/api';
@@ -18,15 +16,12 @@ import { useAppSelector } from '../hooks/redux';
 const Portfolio: React.FC = () => {
   const user = useAppSelector((state) => state.auth.user);
   const { data: portfolios } = useListPortfoliosQuery();
-  const [createPortfolio] = useCreatePortfolioMutation();
   const [addPortfolioItem] = useAddPortfolioItemMutation();
   const [deletePortfolioItem] = useDeletePortfolioItemMutation();
 
   const [selectedPortfolioId, setSelectedPortfolioId] = useState<number | null>(null);
-  // const [showCreateForm, setShowCreateForm] = useState(false); // unused
   const [showAddStockForm, setShowAddStockForm] = useState(false);
 
-  const [newPortfolio, setNewPortfolio] = useState({ name: '', description: '' });
   const [stockSearchQuery, setStockSearchQuery] = useState('');
   const [selectedStock, setSelectedStock] = useState<any>(null);
   const [newItem, setNewItem] = useState({ quantity: 1, average_price: 0 });
@@ -47,7 +42,7 @@ const Portfolio: React.FC = () => {
     { skip: stockSearchQuery.length < 2 }
   );
 
-  const [stocksData, isLoadingStocks] = [null, false]; // ESLint fix - unused but defined
+
 
   const { data: watchlistData } = useGetWatchlistQuery();
   const watchlistCount = watchlistData?.watchlist?.length || 0;

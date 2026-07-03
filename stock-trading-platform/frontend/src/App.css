@@ -52,6 +52,10 @@
   }
 }
 
+/* Accessibility - fix low contrast text */
+.text-gray-400 { color: #6B7280 !important; }
+.bg-green-50 .text-green-600 { color: #15803D !important; }
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

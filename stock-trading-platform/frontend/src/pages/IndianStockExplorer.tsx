@@ -89,17 +89,17 @@ const IndianStockExplorer: React.FC = () => {
 
   const stocks = useMemo(() => {
     if (searchQuery.length >= 2 && searchData) {
-      return searchData.stocks.map(stock => ({
+      return searchData.stocks.map((stock: any) => ({
         ...stock,
-        current_price: 0,
-        formatted_price: '₹0.00',
-        change: 0,
-        change_percent: 0,
-        volume: 0,
-        market_cap: 0
-      }));
+        current_price: stock.current_price ?? 0,
+        formatted_price: stock.formatted_price ?? `₹${(stock.current_price ?? 0).toFixed(2)}`,
+        change: stock.change ?? 0,
+        change_percent: stock.change_percent ?? 0,
+        volume: stock.volume ?? 0,
+        market_cap: stock.market_cap ?? 0
+      })) as StockData[];
     }
-    return allStocksData?.stocks || [];
+    return (allStocksData?.stocks || []) as StockData[];
   }, [searchQuery, searchData, allStocksData]);
 
   const filteredStocks = useMemo(() => {

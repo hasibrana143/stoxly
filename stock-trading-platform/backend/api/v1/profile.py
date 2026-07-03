@@ -65,7 +65,7 @@ async def update_investment_profile(profile_update: InvestmentProfileUpdate, cre
         profile = InvestmentProfileRepository(db).get_by_user_id(user.id)
         if not profile:
             raise HTTPException(status_code=404, detail="Investment profile not found")
-        profile = InvestmentProfileRepository(db).update(profile, **profile_update.dict(exclude_unset=True))
+        profile = InvestmentProfileRepository(db).update(profile, **profile_update.model_dump(exclude_unset=True))
         return profile
     except HTTPException:
         raise

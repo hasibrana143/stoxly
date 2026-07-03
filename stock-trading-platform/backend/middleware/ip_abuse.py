@@ -18,13 +18,16 @@ class IPAbuseMiddleware(BaseHTTPMiddleware):
         self._cleanup_counter = 0
         self._whitelist = {"127.0.0.1", "::1", "localhost"}
 
-        self._exempt_paths = {"/health", "/docs", "/openapi.json", "/redoc"}
+        self._exempt_paths = {"/health", "/docs", "/openapi.json", "/redoc", "/ws"}
         self._threshold = settings.IP_ABUSE_THRESHOLD
         self._window = settings.IP_ABUSE_WINDOW
         self._block_duration = settings.IP_ABUSE_BLOCK_DURATION
 
     async def dispatch(self, request: Request, call_next):
-        if request.url.path in self._exempt_paths:
+        if request.scope["type"] == "websocket":
+            return await call_next(request)
+        path = request.url.path
+        if path in self._exempt_paths or path.startswith("/ws"):
             return await call_next(request)
 
         ip = request.client.host if request.client else "unknown"

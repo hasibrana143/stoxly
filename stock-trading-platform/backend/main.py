@@ -5,7 +5,7 @@ import time
 import logging
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 from decouple import config
 
@@ -114,7 +114,6 @@ app = FastAPI(title=settings.APP_NAME, description="Stoxly.ai - Indian stock tra
 
 app.add_exception_handler(Exception, global_exception_handler)
 
-app.add_middleware(CORSMiddleware, allow_origins=settings.CORS_ORIGINS, allow_credentials=True, allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"])
 app.add_middleware(IPAbuseMiddleware)
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
@@ -124,6 +123,8 @@ app.add_middleware(RequestLoggingMiddleware)
 
 class RequestBodyLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        if request.scope["type"] == "websocket":
+            return await call_next(request)
         if request.method in ("POST", "PUT", "PATCH"):
             cl = request.headers.get("content-length")
             if cl and int(cl) > 1_048_576:
@@ -132,6 +133,14 @@ class RequestBodyLimitMiddleware(BaseHTTPMiddleware):
 
 
 app.add_middleware(RequestBodyLimitMiddleware)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:3003", "https://stoxly.ai"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
+)
 
 
 @app.middleware("http")
@@ -165,7 +174,7 @@ async def health_check():
     return {
         "status": "healthy" if db_ok else "degraded",
         "database": "connected" if db_ok else "disconnected",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "version": settings.VERSION,
         "environment": "production" if not settings.DEBUG else "development",
         "uptime_seconds": round(uptime_seconds, 2),
@@ -219,24 +228,30 @@ app.include_router(i18n.router)
 import profile_endpoints
 app.include_router(profile_endpoints.router)
 
-
 @app.websocket("/ws/stocks")
 async def websocket_endpoint(websocket: WebSocket, token: str = ""):
-    token = websocket.query_params.get("token", token)
+    token = websocket.query_params.get("token", token or "")
     if not token:
-        await websocket.close(code=4001, reason="Missing auth token")
+        await websocket.accept()
+        await websocket.send_json({"error": "Missing auth token"})
+        await websocket.close(code=4001)
         return
     try:
         verify_token(token)
     except Exception:
-        await websocket.close(code=4001, reason="Invalid auth token")
+        await websocket.accept()
+        await websocket.send_json({"error": "Invalid auth token"})
+        await websocket.close(code=4001)
         return
     await manager.connect(websocket)
     try:
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
+        pass
+    finally:
         manager.disconnect(websocket)
+
 
 
 if __name__ == "__main__":

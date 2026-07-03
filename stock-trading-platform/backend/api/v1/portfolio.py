@@ -67,7 +67,7 @@ async def get_all_holdings(credentials: HTTPAuthorizationCredentials = Depends(H
                     price_data = mock_provider.get_current_price(_normalize_symbol(holding.symbol))
                     current_price = price_data["current_price"]
                     name = price_data.get("name", holding.symbol)
-                except:
+                except Exception:
                     current_price = holding.average_price
                     name = holding.symbol
                 current_value = holding.quantity * current_price
@@ -95,7 +95,7 @@ async def get_portfolio_detail(portfolio_id: int, credentials: HTTPAuthorization
             try:
                 price_data = mock_provider.get_current_price(_normalize_symbol(holding.symbol))
                 current_price = price_data["current_price"]
-            except:
+            except Exception:
                 current_price = holding.average_price
             current_value = holding.quantity * current_price
             investment_value = holding.quantity * holding.average_price

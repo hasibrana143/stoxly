@@ -36,7 +36,7 @@ async def get_user_profile(credentials: HTTPAuthorizationCredentials = Depends(s
     repo = UserProfileRepository(db)
     profile = repo.get_by_user_id(user.id)
     if not profile:
-        return UserProfileResponse(id=0, user_id=user.id, full_name="", phone_number="", date_of_birth=None, address="", city="", country="", bio="", avatar_url="", created_at=datetime.now(), updated_at=datetime.now())
+        return UserProfileResponse(id=0, user_id=user.id, full_name="", phone_number="", date_of_birth=None, location="", preferred_language="en", profile_picture_url=None, created_at=datetime.now(), updated_at=datetime.now())
     return profile
 
 
@@ -46,9 +46,9 @@ async def update_user_profile(profile_data: UserProfileUpdate, credentials: HTTP
     repo = UserProfileRepository(db)
     profile = repo.get_by_user_id(user.id)
     if not profile:
-        profile = repo.create(user.id, **profile_data.dict(exclude_unset=True))
+        profile = repo.create(user.id, **profile_data.model_dump(exclude_unset=True))
     else:
-        for key, value in profile_data.dict(exclude_unset=True).items():
+        for key, value in profile_data.model_dump(exclude_unset=True).items():
             setattr(profile, key, value)
         db.commit()
         db.refresh(profile)
@@ -71,9 +71,9 @@ async def update_notification_settings(settings_data: NotificationSettingsUpdate
     repo = NotificationSettingsRepository(db)
     settings = repo.get_by_user_id(user.id)
     if not settings:
-        settings = repo.create(user.id, **settings_data.dict(exclude_unset=True))
+        settings = repo.create(user.id, **settings_data.model_dump(exclude_unset=True))
     else:
-        for key, value in settings_data.dict(exclude_unset=True).items():
+        for key, value in settings_data.model_dump(exclude_unset=True).items():
             setattr(settings, key, value)
         db.commit()
         db.refresh(settings)
@@ -96,9 +96,9 @@ async def update_display_preferences(prefs_data: DisplayPreferencesUpdate, crede
     repo = DisplayPreferencesRepository(db)
     prefs = repo.get_by_user_id(user.id)
     if not prefs:
-        prefs = repo.create(user.id, **prefs_data.dict(exclude_unset=True))
+        prefs = repo.create(user.id, **prefs_data.model_dump(exclude_unset=True))
     else:
-        for key, value in prefs_data.dict(exclude_unset=True).items():
+        for key, value in prefs_data.model_dump(exclude_unset=True).items():
             setattr(prefs, key, value)
         db.commit()
         db.refresh(prefs)
@@ -123,5 +123,5 @@ async def get_subscription(credentials: HTTPAuthorizationCredentials = Depends(s
     repo = SubscriptionRepository(db)
     sub = repo.get_by_user_id(user.id)
     if not sub:
-        return SubscriptionResponse(id=0, user_id=user.id, plan_name="Free", plan_type="free", price=0.0, status="active", start_date=datetime.now(), next_billing_date=None, created_at=datetime.now(), updated_at=datetime.now())
+        return SubscriptionResponse(id=0, user_id=user.id, plan_type="free", status="active", auto_renew=False, start_date=datetime.now(), expiry_date=None, created_at=datetime.now(), updated_at=datetime.now())
     return sub

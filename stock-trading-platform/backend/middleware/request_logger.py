@@ -13,7 +13,7 @@ EXEMPT_PATHS = {"/metrics", "/health", "/api/v1/health", "/docs", "/openapi.json
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
-        if path in EXEMPT_PATHS:
+        if path in EXEMPT_PATHS or path.startswith("/ws"):
             return await call_next(request)
 
         method = request.method
